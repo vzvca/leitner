@@ -67,6 +67,15 @@
     return deck;
   };
 
+  Store.prototype.renameDeck = function (deckId, name, description) {
+    var deck = this.decks.find(function (d) { return d.id === deckId; });
+    if (!deck) return null;
+    if (typeof name === "string" && name.trim()) deck.name = name.trim();
+    if (typeof description === "string") deck.description = description.trim();
+    this.save();
+    return deck;
+  };
+
   Store.prototype.removeDeck = function (deckId) {
     var idx = this.decks.findIndex(function (d) { return d.id === deckId; });
     if (idx === -1) return false;

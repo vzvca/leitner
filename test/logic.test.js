@@ -211,6 +211,27 @@ describe("Store", function () {
     assert.notStrictEqual(s.decks[0].id, only.id);
   });
 
+  it("renameDeck modifie nom et description, rejette un nom vide", function () {
+    var s = new Store(memStorage());
+    var deck = s.addDeck("Espagnol");
+    s.renameDeck(deck.id, "Anglais — cuisine", "Vocabulaire cuisine");
+    assert.strictEqual(deck.name, "Anglais — cuisine");
+    assert.strictEqual(deck.description, "Vocabulaire cuisine");
+    s.renameDeck(deck.id, "   ");
+    assert.strictEqual(deck.name, "Anglais — cuisine");
+    assert.strictEqual(s.renameDeck("inconnu", "x"), null);
+  });
+
+  it("addDeck rend le nouveau paquet actif et le persiste", function () {
+    var storage = memStorage();
+    var s = new Store(storage);
+    var d = s.addDeck("Voyage");
+    assert.strictEqual(s.activeDeck().id, d.id);
+    var s2 = new Store(storage);
+    assert.strictEqual(s2.activeDeckId, d.id);
+    assert.strictEqual(s2.decks.length, 2);
+  });
+
   it("importJSON accepte un export valide et rejette un format invalide", function () {
     var s = new Store(memStorage());
     s.activeDeck().addCard("x", "y", REF);

@@ -20,6 +20,7 @@ Les cartes sont réparties dans **5 boîtes** aux intervalles de révision crois
 - **HTML / CSS / JavaScript** vanilla, aucune étape de build.
 - [Mithril.js v2](https://mithril.js.org) servi localement (`vendor/mithril.min.js`).
 - Persistance **localStorage** (aucun backend requis).
+- **Jeux de cartes multiples** (ex. « Anglais — cuisine », « Anglais — voyage », « Dates historiques ») : création, renommage, suppression, sélection du jeu actif (sélecteur dans l'en-tête + page « Jeux »).
 - Import / export JSON des paquets.
 
 ## Structure
@@ -30,7 +31,7 @@ css/app.css           styles
 vendor/mithril.min.js librairie Mithril
 js/models/            Card, Deck, constantes (logique métier pure, testable sous Node)
 js/services/store.js  persistance localStorage + import/export
-js/views/             composants Mithril (Layout, CardList, Review, Stats)
+js/views/             composants Mithril (Layout, Decks, CardList, Review, Stats)
 js/app.js             bootstrap + routage
 test/logic.test.js    tests unitaires (node:test)
 ```

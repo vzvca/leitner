@@ -10,7 +10,17 @@
       vnode.state.current = null;
       vnode.state.revealed = false;
       vnode.state.done = 0;
+      vnode.state._deckId = vnode.attrs.store.activeDeck().id;
       Review.buildQueue(vnode);
+    },
+    onbeforeupdate: function (vnode) {
+      var s = vnode.state;
+      var deckId = s.store.activeDeck().id;
+      if (deckId !== s._deckId) {
+        s._deckId = deckId;
+        s.done = 0;
+        Review.buildQueue(vnode);
+      }
     },
     buildQueue: function (vnode) {
       var s = vnode.state;

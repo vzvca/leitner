@@ -7,6 +7,9 @@
 
   var root = document.getElementById("app");
   m.route(root, "/cards", {
+    "/decks": {
+      render: function () { return m(global.Layout, { store: store }, m(global.Decks, { store: store })); }
+    },
     "/cards": {
       render: function () { return m(global.Layout, { store: store }, m(global.CardList, { store: store })); }
     },

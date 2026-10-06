@@ -23,7 +23,9 @@ Les cartes sont réparties dans **5 boîtes** aux intervalles de révision crois
 - **Jeux de cartes multiples** (ex. « Anglais — cuisine », « Anglais — voyage », « Dates historiques ») : création, renommage, suppression, sélection du jeu actif (sélecteur dans l'en-tête + page « Jeux »).
 - **Assistant IA (Mistral)** : génération automatique d'un jeu sur un sujet donné (taille optionnelle : 10/20/50/100/200, ou déduite du sujet, ex. les 101 départements), et révision d'un jeu existant par consigne libre (ex. « remplace les mots trop techniques par des mots courants »). La clé API est fournie par l'utilisateur et stockée uniquement dans son navigateur.
 - **Formules mathématiques en LaTeX** rendues avec [KaTeX](https://katex.org) (servi localement) : `$...$` inline, `$$...$$` en display, `\(...\)`. Les prompts de l'assistant IA demandent au modèle d'écrire les maths en LaTeX.
-- Import / export JSON des paquets.
+- **Partage de jeux individuels** : exporter/importer un seul jeu au format `leitner-deck-share` (JSON), **sans les données de révision** (boîtes, échéances, statistiques) — idéal pour échanger des jeux. L'import ajoute le jeu à la collection sans toucher aux autres.
+- **Catalogue de jeux prêts** : des jeux fournis dans le dossier `decks/` sont importables en un clic depuis la page Jeux.
+- Import / export JSON des paquets (sauvegarde complète, avec données de révision).
 
 ## Structure
 
@@ -38,6 +40,7 @@ js/services/mistral.js client API Mistral (génération/révision de jeux)
 js/services/settings.js clé API Mistral (localStorage)
 js/views/             composants Mithril (Layout, Decks, AIStudio, CardList, Review, Stats, MathText)
 exemple-jeu-derivees.json  jeu d'exemple « Dérivées des fonctions usuelles » (LaTeX) à importer via Statistiques → Importer
+decks/               catalogue de jeux prêts à importer (catalog.json + un fichier JSON par jeu, format leitner-deck-share)
 js/app.js             bootstrap + routage
 test/logic.test.js    tests unitaires (node:test)
 ```

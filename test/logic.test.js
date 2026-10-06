@@ -23,6 +23,7 @@ var ctx = vm.createContext({
       "Deck.js": "js/models/Deck.js",
       "./Deck.js": "js/models/Deck.js",
       "store.js": "js/services/store.js",
+      "shuffle.js": "js/models/shuffle.js",
       "mistral.js": "js/services/mistral.js",
       "settings.js": "js/services/settings.js",
       "../models/Deck.js": "js/models/Deck.js",
@@ -49,6 +50,7 @@ var constants = loadFile("js/models/constants.js");
 var Card = loadFile("js/models/Card.js");
 var Deck = loadFile("js/models/Deck.js");
 var Store = loadFile("js/services/store.js");
+var Shuffle = loadFile("js/models/shuffle.js");
 var MistralClient = loadFile("js/services/mistral.js");
 var Settings = loadFile("js/services/settings.js");
 
@@ -301,6 +303,68 @@ describe("Settings (clé API)", function () {
     var st2 = new Settings(storage);
     assert.strictEqual(st2.getApiKey(), "test-key");
     assert.strictEqual(st2.getModel(), "mistral-small-latest");
+  });
+});
+
+describe("Shuffle (file de révision)", function () {
+  it("mélange sans perdre ni dupliquer d'éléments", function () {
+    var input = [];
+    for (var i = 0; i < 100; i++) input.push("c" + i);
+    var copy = input.slice();
+    Shuffle.shuffleInPlace(copy);
+    assert.strictEqual(copy.length, 100);
+    var seen = {};
+    copy.forEach(function (x) {
+      assert.ok(!seen[x], "pas de doublon");
+      seen[x] = true;
+    });
+    assert.strictEqual(Object.keys(seen).length, 100);
+  });
+
+  it("ne suit pas l'ordre d'origine sur un jeu suffisamment grand", function () {
+    var sameOrderCount = 0;
+    var trials = 50;
+    for (var t = 0; t < trials; t++) {
+      var input = [];
+      for (var i = 0; i < 20; i++) input.push(i);
+      Shuffle.shuffleInPlace(input);
+      var inOrder = true;
+      for (var k = 0; k < input.length; k++) {
+        if (input[k] !== k) { inOrder = false; break; }
+      }
+      if (inOrder) sameOrderCount++;
+    }
+    assert.ok(sameOrderCount < trials, "le mélange doit casser l'ordre (probabilité d'ordre intact ~ 1/20!)");
+  });
+
+  it("gère les cas limites (0, 1, 2 éléments)", function () {
+    assert.deepStrictEqual(Shuffle.shuffleInPlace([]), []);
+    var one = [42];
+    assert.deepStrictEqual(Shuffle.shuffleInPlace(one), [42]);
+    var two = [1, 2];
+    Shuffle.shuffleInPlace(two);
+    assert.strictEqual(two.length, 2);
+    assert.ok(two.indexOf(1) !== -1 && two.indexOf(2) !== -1);
+  });
+
+  it("sépare les paires recto/verso réciproques (cas départements)", function () {
+    var ordered = [];
+    for (var n = 1; n <= 10; n++) {
+      ordered.push({ front: String(n).padStart(2, "0"), back: "dept" + n });
+      ordered.push({ front: "dept" + n, back: String(n).padStart(2, "0") });
+    }
+    var adjacentPairs = 0;
+    var trials = 30;
+    for (var t = 0; t < trials; t++) {
+      var q = ordered.slice();
+      Shuffle.shuffleInPlace(q);
+      for (var i = 0; i < q.length - 1; i++) {
+        if (q[i].front === q[i + 1].back && q[i].back === q[i + 1].front) {
+          adjacentPairs++;
+        }
+      }
+    }
+    assert.ok(adjacentPairs < trials, "les paires réciproques ne doivent pas être systématiquement adjacentes");
   });
 });
 

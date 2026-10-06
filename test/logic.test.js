@@ -23,6 +23,8 @@ var ctx = vm.createContext({
       "Deck.js": "js/models/Deck.js",
       "./Deck.js": "js/models/Deck.js",
       "store.js": "js/services/store.js",
+      "mistral.js": "js/services/mistral.js",
+      "settings.js": "js/services/settings.js",
       "../models/Deck.js": "js/models/Deck.js",
       "../models/constants.js": "js/models/constants.js"
     };
@@ -47,6 +49,8 @@ var constants = loadFile("js/models/constants.js");
 var Card = loadFile("js/models/Card.js");
 var Deck = loadFile("js/models/Deck.js");
 var Store = loadFile("js/services/store.js");
+var MistralClient = loadFile("js/services/mistral.js");
+var Settings = loadFile("js/services/settings.js");
 
 var REF = new Date(2026, 0, 10);
 function dayString(d) {
@@ -240,6 +244,63 @@ describe("Store", function () {
     assert.strictEqual(n, 1);
     assert.throws(function () { s.importJSON('{"foo":1}'); }, /Format invalide/);
     assert.throws(function () { s.importJSON('{"decks":[]}'); }, /Aucun paquet/);
+  });
+});
+
+describe("MistralClient (logique pure)", function () {
+  it("parseJSONLoose gère JSON nu, encadré de texte et bloc markdown", function () {
+    var o1 = MistralClient.parseJSONLoose('{"a":1}');
+    assert.strictEqual(o1.a, 1);
+    var o2 = MistralClient.parseJSONLoose('Voici le JSON : {"b":2} merci');
+    assert.strictEqual(o2.b, 2);
+    var o4 = MistralClient.parseJSONLoose('```json\n{"c":3}\n```');
+    assert.strictEqual(o4.c, 3);
+  });
+
+  it("parseJSONLoose rejette le JSON invalide", function () {
+    assert.throws(function () { MistralClient.parseJSONLoose("pas du json"); });
+  });
+
+  it("extractCards filtre les cartes invalides et normalise", function () {
+    var cards = MistralClient.extractCards({
+      cards: [
+        { front: "  a ", back: " b " },
+        { front: "", back: "x" },
+        { front: "y" },
+        null,
+        { front: "c", back: "d" }
+      ]
+    });
+    assert.strictEqual(cards.length, 2);
+    assert.strictEqual(cards[0].front, "a");
+    assert.strictEqual(cards[0].back, "b");
+    assert.strictEqual(cards[1].front, "c");
+  });
+
+  it("CARD_SIZES propose 10, 20, 50, 100, 200", function () {
+    assert.strictEqual(MistralClient.CARD_SIZES.length, 5);
+    [10, 20, 50, 100, 200].forEach(function (v, i) {
+      assert.strictEqual(MistralClient.CARD_SIZES[i], v);
+    });
+  });
+});
+
+describe("Settings (clé API)", function () {
+  it("sauvegarde et relit la clé API et le modèle", function () {
+    var storage = (function () {
+      var data = {};
+      return {
+        getItem: function (k) { return k in data ? data[k] : null; },
+        setItem: function (k, v) { data[k] = String(v); }
+      };
+    })();
+    var st = new Settings(storage);
+    assert.strictEqual(st.getApiKey(), "");
+    st.setApiKey("  test-key  ");
+    st.setModel("mistral-small-latest");
+    var st2 = new Settings(storage);
+    assert.strictEqual(st2.getApiKey(), "test-key");
+    assert.strictEqual(st2.getModel(), "mistral-small-latest");
   });
 });
 

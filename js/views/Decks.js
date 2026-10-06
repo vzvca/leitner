@@ -76,6 +76,10 @@
       return m(".decks-view", [
         m(".card-panel", [
           m("h2", "Nouveau jeu de cartes"),
+          m("p", [
+            "Ou ",
+            m(m.route.Link, { href: "/ai" }, "générer un jeu avec l'IA Mistral →")
+          ]),
           m("form.stack", { onsubmit: function (e) { Decks.create(s, e); } }, [
             m("div", [
               m("label", "Nom du jeu"),

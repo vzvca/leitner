@@ -17,7 +17,8 @@
             m(m.route.Link, { href: "/cards", class: isActive("/cards") ? "active" : "" }, "Cartes"),
             m(m.route.Link, { href: "/review", class: isActive("/review") ? "active" : "" }, "Révision"),
             m(m.route.Link, { href: "/stats", class: isActive("/stats") ? "active" : "" }, "Statistiques"),
-            m(m.route.Link, { href: "/decks", class: isActive("/decks") ? "active" : "" }, "Jeux")
+            m(m.route.Link, { href: "/decks", class: isActive("/decks") ? "active" : "" }, "Jeux"),
+            m(m.route.Link, { href: "/ai", class: isActive("/ai") ? "active" : "" }, "Assistant IA")
           ]),
           activeDeck
             ? m("label", { style: "display:flex; align-items:center; gap:.4rem" }, [

@@ -21,6 +21,7 @@ Les cartes sont réparties dans **5 boîtes** aux intervalles de révision crois
 - [Mithril.js v2](https://mithril.js.org) servi localement (`vendor/mithril.min.js`).
 - Persistance **localStorage** (aucun backend requis).
 - **Jeux de cartes multiples** (ex. « Anglais — cuisine », « Anglais — voyage », « Dates historiques ») : création, renommage, suppression, sélection du jeu actif (sélecteur dans l'en-tête + page « Jeux »).
+- **Assistant IA (Mistral)** : génération automatique d'un jeu sur un sujet donné (taille optionnelle : 10/20/50/100/200, ou déduite du sujet, ex. les 101 départements), et révision d'un jeu existant par consigne libre (ex. « remplace les mots trop techniques par des mots courants »). La clé API est fournie par l'utilisateur et stockée uniquement dans son navigateur.
 - Import / export JSON des paquets.
 
 ## Structure
@@ -31,7 +32,9 @@ css/app.css           styles
 vendor/mithril.min.js librairie Mithril
 js/models/            Card, Deck, constantes (logique métier pure, testable sous Node)
 js/services/store.js  persistance localStorage + import/export
-js/views/             composants Mithril (Layout, Decks, CardList, Review, Stats)
+js/services/mistral.js client API Mistral (génération/révision de jeux)
+js/services/settings.js clé API Mistral (localStorage)
+js/views/             composants Mithril (Layout, Decks, AIStudio, CardList, Review, Stats)
 js/app.js             bootstrap + routage
 test/logic.test.js    tests unitaires (node:test)
 ```

@@ -98,6 +98,49 @@
     );
   };
 
+  Store.prototype.exportDeckShare = function (deckId) {
+    var deck = this.decks.find(function (d) { return d.id === deckId; });
+    if (!deck) return null;
+    return JSON.stringify(
+      {
+        format: "leitner-deck-share",
+        version: 1,
+        name: deck.name,
+        description: deck.description,
+        cards: deck.cards.map(function (c) {
+          return { front: c.front, back: c.back };
+        })
+      },
+      null,
+      2
+    );
+  };
+
+  Store.prototype.importDeckShare = function (raw) {
+    var data = typeof raw === "string" ? JSON.parse(raw) : raw;
+    var cards = data && Array.isArray(data.cards) ? data.cards : [];
+    var valid = cards.filter(function (c) {
+      return c && typeof c.front === "string" && typeof c.back === "string" &&
+        c.front.trim() && c.back.trim();
+    }).map(function (c) {
+      return { front: c.front.trim(), back: c.back.trim() };
+    });
+    if (valid.length === 0) {
+      throw new Error("Aucune carte valide dans le jeu importé");
+    }
+    var name = typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Jeu importé";
+    var deck = new Deck({ name: name, description: typeof data.description === "string" ? data.description : "" });
+    valid.forEach(function (c) {
+      deck.addCard(c.front, c.back);
+    });
+    var existing = this.decks.filter(function (d) { return d.name === deck.name; }).length;
+    if (existing > 0) deck.name = deck.name + " (2)";
+    this.decks.push(deck);
+    this.activeDeckId = deck.id;
+    this.save();
+    return deck;
+  };
+
   Store.prototype.importJSON = function (raw) {
     var data = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!data || !Array.isArray(data.decks)) {

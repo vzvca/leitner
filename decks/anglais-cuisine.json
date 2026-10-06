@@ -1,0 +1,248 @@
+{
+  "format": "leitner-deck-share",
+  "version": 1,
+  "name": "Anglais — cuisine",
+  "description": "Vocabulaire courant de la cuisine en anglais (verbes, ustensiles, ingrédients)",
+  "cards": [
+    {
+      "front": "to bake",
+      "back": "cuire au four"
+    },
+    {
+      "front": "to boil",
+      "back": "faire bouillir"
+    },
+    {
+      "front": "to fry",
+      "back": "faire frire"
+    },
+    {
+      "front": "to simmer",
+      "back": "mijoter"
+    },
+    {
+      "front": "to chop",
+      "back": "hacher"
+    },
+    {
+      "front": "to slice",
+      "back": "trancher"
+    },
+    {
+      "front": "to peel",
+      "back": "éplucher"
+    },
+    {
+      "front": "to stir",
+      "back": "remuer"
+    },
+    {
+      "front": "to whisk",
+      "back": "fouetter"
+    },
+    {
+      "front": "to knead",
+      "back": "pétrir"
+    },
+    {
+      "front": "to grill",
+      "back": "griller"
+    },
+    {
+      "front": "to steam",
+      "back": "cuire à la vapeur"
+    },
+    {
+      "front": "oven",
+      "back": "four"
+    },
+    {
+      "front": "stove",
+      "back": "cuisinière"
+    },
+    {
+      "front": "saucepan",
+      "back": "casserole"
+    },
+    {
+      "front": "frying pan",
+      "back": "poêle"
+    },
+    {
+      "front": "knife",
+      "back": "couteau"
+    },
+    {
+      "front": "cutting board",
+      "back": "planche à découper"
+    },
+    {
+      "front": "mixing bowl",
+      "back": "saladier"
+    },
+    {
+      "front": "whisk",
+      "back": "fouet"
+    },
+    {
+      "front": "spatula",
+      "back": "spatule"
+    },
+    {
+      "front": "ladle",
+      "back": "louche"
+    },
+    {
+      "front": "colander",
+      "back": "passoire"
+    },
+    {
+      "front": "strainer",
+      "back": "tamis"
+    },
+    {
+      "front": "grater",
+      "back": "râpe"
+    },
+    {
+      "front": "peeler",
+      "back": "économe"
+    },
+    {
+      "front": "rolling pin",
+      "back": "rouleau à pâtisserie"
+    },
+    {
+      "front": "recipe",
+      "back": "recette"
+    },
+    {
+      "front": "ingredient",
+      "back": "ingrédient"
+    },
+    {
+      "front": "tablespoon",
+      "back": "cuillère à soupe"
+    },
+    {
+      "front": "teaspoon",
+      "back": "cuillère à café"
+    },
+    {
+      "front": "pinch of salt",
+      "back": "une pincée de sel"
+    },
+    {
+      "front": "to taste",
+      "back": "selon le goût"
+    },
+    {
+      "front": "flour",
+      "back": "farine"
+    },
+    {
+      "front": "sugar",
+      "back": "sucre"
+    },
+    {
+      "front": "butter",
+      "back": "beurre"
+    },
+    {
+      "front": "egg",
+      "back": "œuf"
+    },
+    {
+      "front": "milk",
+      "back": "lait"
+    },
+    {
+      "front": "cream",
+      "back": "crème"
+    },
+    {
+      "front": "cheese",
+      "back": "fromage"
+    },
+    {
+      "front": "yogurt",
+      "back": "yaourt"
+    },
+    {
+      "front": "honey",
+      "back": "miel"
+    },
+    {
+      "front": "vegetable",
+      "back": "légume"
+    },
+    {
+      "front": "fruit",
+      "back": "fruit"
+    },
+    {
+      "front": "herb",
+      "back": "herbe aromatique"
+    },
+    {
+      "front": "spice",
+      "back": "épice"
+    },
+    {
+      "front": "pepper",
+      "back": "poivre"
+    },
+    {
+      "front": "onion",
+      "back": "oignon"
+    },
+    {
+      "front": "garlic",
+      "back": "ail"
+    },
+    {
+      "front": "leek",
+      "back": "poireau"
+    },
+    {
+      "front": "mushroom",
+      "back": "champignon"
+    },
+    {
+      "front": "appetizer",
+      "back": "entrée"
+    },
+    {
+      "front": "main course",
+      "back": "plat principal"
+    },
+    {
+      "front": "side dish",
+      "back": "accompagnement"
+    },
+    {
+      "front": "dessert",
+      "back": "dessert"
+    },
+    {
+      "front": "leftovers",
+      "back": "restes"
+    },
+    {
+      "front": "cutlery",
+      "back": "couverts"
+    },
+    {
+      "front": "napkin",
+      "back": "serviette"
+    },
+    {
+      "front": "dishwasher",
+      "back": "lave-vaisselle"
+    },
+    {
+      "front": "to do the dishes",
+      "back": "faire la vaisselle"
+    }
+  ]
+}

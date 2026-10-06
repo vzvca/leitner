@@ -1,0 +1,412 @@
+{
+  "format": "leitner-deck-share",
+  "version": 1,
+  "name": "Départements français",
+  "description": "Numéro → nom des 101 départements français (métropole + outre-mer)",
+  "cards": [
+    {
+      "front": "01",
+      "back": "Ain"
+    },
+    {
+      "front": "02",
+      "back": "Aisne"
+    },
+    {
+      "front": "03",
+      "back": "Allier"
+    },
+    {
+      "front": "04",
+      "back": "Alpes-de-Haute-Provence"
+    },
+    {
+      "front": "05",
+      "back": "Hautes-Alpes"
+    },
+    {
+      "front": "06",
+      "back": "Alpes-Maritimes"
+    },
+    {
+      "front": "07",
+      "back": "Ardèche"
+    },
+    {
+      "front": "08",
+      "back": "Ardennes"
+    },
+    {
+      "front": "09",
+      "back": "Ariège"
+    },
+    {
+      "front": "10",
+      "back": "Aube"
+    },
+    {
+      "front": "11",
+      "back": "Aude"
+    },
+    {
+      "front": "12",
+      "back": "Aveyron"
+    },
+    {
+      "front": "13",
+      "back": "Bouches-du-Rhône"
+    },
+    {
+      "front": "14",
+      "back": "Calvados"
+    },
+    {
+      "front": "15",
+      "back": "Cantal"
+    },
+    {
+      "front": "16",
+      "back": "Charente"
+    },
+    {
+      "front": "17",
+      "back": "Charente-Maritime"
+    },
+    {
+      "front": "18",
+      "back": "Cher"
+    },
+    {
+      "front": "19",
+      "back": "Corrèze"
+    },
+    {
+      "front": "2A",
+      "back": "Corse-du-Sud"
+    },
+    {
+      "front": "2B",
+      "back": "Haute-Corse"
+    },
+    {
+      "front": "21",
+      "back": "Côte-d'Or"
+    },
+    {
+      "front": "22",
+      "back": "Côtes-d'Armor"
+    },
+    {
+      "front": "23",
+      "back": "Creuse"
+    },
+    {
+      "front": "24",
+      "back": "Dordogne"
+    },
+    {
+      "front": "25",
+      "back": "Doubs"
+    },
+    {
+      "front": "26",
+      "back": "Drôme"
+    },
+    {
+      "front": "27",
+      "back": "Eure"
+    },
+    {
+      "front": "28",
+      "back": "Eure-et-Loir"
+    },
+    {
+      "front": "29",
+      "back": "Finistère"
+    },
+    {
+      "front": "30",
+      "back": "Gard"
+    },
+    {
+      "front": "31",
+      "back": "Haute-Garonne"
+    },
+    {
+      "front": "32",
+      "back": "Gers"
+    },
+    {
+      "front": "33",
+      "back": "Gironde"
+    },
+    {
+      "front": "34",
+      "back": "Hérault"
+    },
+    {
+      "front": "35",
+      "back": "Ille-et-Vilaine"
+    },
+    {
+      "front": "36",
+      "back": "Indre"
+    },
+    {
+      "front": "37",
+      "back": "Indre-et-Loire"
+    },
+    {
+      "front": "38",
+      "back": "Isère"
+    },
+    {
+      "front": "39",
+      "back": "Jura"
+    },
+    {
+      "front": "40",
+      "back": "Landes"
+    },
+    {
+      "front": "41",
+      "back": "Loir-et-Cher"
+    },
+    {
+      "front": "42",
+      "back": "Loire"
+    },
+    {
+      "front": "43",
+      "back": "Haute-Loire"
+    },
+    {
+      "front": "44",
+      "back": "Loire-Atlantique"
+    },
+    {
+      "front": "45",
+      "back": "Loiret"
+    },
+    {
+      "front": "46",
+      "back": "Lot"
+    },
+    {
+      "front": "47",
+      "back": "Lot-et-Garonne"
+    },
+    {
+      "front": "48",
+      "back": "Lozère"
+    },
+    {
+      "front": "49",
+      "back": "Maine-et-Loire"
+    },
+    {
+      "front": "50",
+      "back": "Manche"
+    },
+    {
+      "front": "51",
+      "back": "Marne"
+    },
+    {
+      "front": "52",
+      "back": "Haute-Marne"
+    },
+    {
+      "front": "53",
+      "back": "Mayenne"
+    },
+    {
+      "front": "54",
+      "back": "Meurthe-et-Moselle"
+    },
+    {
+      "front": "55",
+      "back": "Meuse"
+    },
+    {
+      "front": "56",
+      "back": "Morbihan"
+    },
+    {
+      "front": "57",
+      "back": "Moselle"
+    },
+    {
+      "front": "58",
+      "back": "Nièvre"
+    },
+    {
+      "front": "59",
+      "back": "Nord"
+    },
+    {
+      "front": "60",
+      "back": "Oise"
+    },
+    {
+      "front": "61",
+      "back": "Orne"
+    },
+    {
+      "front": "62",
+      "back": "Pas-de-Calais"
+    },
+    {
+      "front": "63",
+      "back": "Puy-de-Dôme"
+    },
+    {
+      "front": "64",
+      "back": "Pyrénées-Atlantiques"
+    },
+    {
+      "front": "65",
+      "back": "Hautes-Pyrénées"
+    },
+    {
+      "front": "66",
+      "back": "Pyrénées-Orientales"
+    },
+    {
+      "front": "67",
+      "back": "Bas-Rhin"
+    },
+    {
+      "front": "68",
+      "back": "Haut-Rhin"
+    },
+    {
+      "front": "69",
+      "back": "Rhône"
+    },
+    {
+      "front": "70",
+      "back": "Haute-Saône"
+    },
+    {
+      "front": "71",
+      "back": "Saône-et-Loire"
+    },
+    {
+      "front": "72",
+      "back": "Sarthe"
+    },
+    {
+      "front": "73",
+      "back": "Savoie"
+    },
+    {
+      "front": "74",
+      "back": "Haute-Savoie"
+    },
+    {
+      "front": "75",
+      "back": "Paris"
+    },
+    {
+      "front": "76",
+      "back": "Seine-Maritime"
+    },
+    {
+      "front": "77",
+      "back": "Seine-et-Marne"
+    },
+    {
+      "front": "78",
+      "back": "Yvelines"
+    },
+    {
+      "front": "79",
+      "back": "Deux-Sèvres"
+    },
+    {
+      "front": "80",
+      "back": "Somme"
+    },
+    {
+      "front": "81",
+      "back": "Tarn"
+    },
+    {
+      "front": "82",
+      "back": "Tarn-et-Garonne"
+    },
+    {
+      "front": "83",
+      "back": "Var"
+    },
+    {
+      "front": "84",
+      "back": "Vaucluse"
+    },
+    {
+      "front": "85",
+      "back": "Vendée"
+    },
+    {
+      "front": "86",
+      "back": "Vienne"
+    },
+    {
+      "front": "87",
+      "back": "Haute-Vienne"
+    },
+    {
+      "front": "88",
+      "back": "Vosges"
+    },
+    {
+      "front": "89",
+      "back": "Yonne"
+    },
+    {
+      "front": "90",
+      "back": "Territoire de Belfort"
+    },
+    {
+      "front": "91",
+      "back": "Essonne"
+    },
+    {
+      "front": "92",
+      "back": "Hauts-de-Seine"
+    },
+    {
+      "front": "93",
+      "back": "Seine-Saint-Denis"
+    },
+    {
+      "front": "94",
+      "back": "Val-de-Marne"
+    },
+    {
+      "front": "95",
+      "back": "Val-d'Oise"
+    },
+    {
+      "front": "971",
+      "back": "Guadeloupe"
+    },
+    {
+      "front": "972",
+      "back": "Martinique"
+    },
+    {
+      "front": "973",
+      "back": "Guyane"
+    },
+    {
+      "front": "974",
+      "back": "La Réunion"
+    },
+    {
+      "front": "976",
+      "back": "Mayotte"
+    }
+  ]
+}

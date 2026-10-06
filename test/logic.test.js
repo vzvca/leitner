@@ -450,6 +450,93 @@ describe("MathRender (segments LaTeX)", function () {
   });
 });
 
+describe("Partage de jeux individuels", function () {
+  var deck1;
+
+  beforeEach(function () {
+    deck1 = new Deck({ name: "Cuisine EN" });
+    deck1.addCard("knife", "couteau");
+    var c = deck1.addCard("oven", "four");
+    c.markCorrect([1, 2, 4, 7, 15]);
+    c.wrongCount = 2;
+  });
+
+  it("exportDeckShare produit un JSON sans boîtes ni statistiques", function () {
+    var s = new Store(memStorageGlobal());
+    s.decks = [deck1];
+    var raw = s.exportDeckShare(deck1.id);
+    assert.ok(raw, "export non vide");
+    var data = JSON.parse(raw);
+    assert.strictEqual(data.format, "leitner-deck-share");
+    assert.strictEqual(data.version, 1);
+    assert.strictEqual(data.name, "Cuisine EN");
+    assert.strictEqual(data.cards.length, 2);
+    data.cards.forEach(function (c) {
+      assert.deepStrictEqual(Object.keys(c).sort(), ["back", "front"]);
+    });
+  });
+
+  it("exportDeckShare sur un id inconnu renvoie null", function () {
+    var s = new Store(memStorageGlobal());
+    s.decks = [deck1];
+    assert.strictEqual(s.exportDeckShare("inconnu"), null);
+  });
+
+  it("importDeckShare ajoute le jeu sans toucher aux autres paquets", function () {
+    var s = new Store(memStorageGlobal());
+    s.decks = [deck1];
+    var shared = JSON.stringify({
+      format: "leitner-deck-share",
+      version: 1,
+      name: "Départements",
+      cards: [{ front: "07", back: "Ardèche" }, { front: "69", back: "Rhône" }]
+    });
+    var deck = s.importDeckShare(shared);
+    assert.strictEqual(s.decks.length, 2);
+    assert.strictEqual(deck.cards.length, 2);
+    assert.strictEqual(deck.cards[0].front, "07");
+    assert.strictEqual(deck.cards[0].box, 1);
+    assert.ok(deck.cards[0].dueDate, "échéance initialisée");
+    assert.strictEqual(deck1.cards.length, 2, "le paquet existant est intact");
+  });
+
+  it("importDeckShare filtre les cartes invalides et renomme en cas de doublon", function () {
+    var s = new Store(memStorageGlobal());
+    s.decks = [deck1];
+    var shared = JSON.stringify({
+      name: "Cuisine EN",
+      cards: [
+        { front: "a", back: "b" },
+        { front: "", back: "x" },
+        { front: "y" },
+        null
+      ]
+    });
+    var deck = s.importDeckShare(shared);
+    assert.strictEqual(deck.cards.length, 1);
+    assert.strictEqual(deck.name, "Cuisine EN (2)");
+  });
+
+  it("importDeckShare rejette un jeu sans carte valide", function () {
+    var s = new Store(memStorageGlobal());
+    assert.throws(function () {
+      s.importDeckShare('{"name":"vide","cards":[]}');
+    }, /Aucune carte valide/);
+  });
+
+  it("les jeux du catalogue decks/ sont au format share et valides", function () {
+    var s = new Store(memStorageGlobal());
+    var cat = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "decks", "catalog.json"), "utf8"));
+    assert.ok(cat.decks.length >= 3);
+    cat.decks.forEach(function (entry) {
+      var raw = fs.readFileSync(path.join(__dirname, "..", "decks", entry.file), "utf8");
+      var deck = s.importDeckShare(raw);
+      assert.strictEqual(deck.name, entry.name);
+      assert.strictEqual(deck.cards.length, entry.cardCount);
+    });
+  });
+});
+
 describe("Cycle de Leitner de bout en bout", function () {
   it("une carte traverse les boîtes puis est acquise ; une erreur la renvoie en boîte 1", function () {
     var deck = new Deck({ name: "cycle" });

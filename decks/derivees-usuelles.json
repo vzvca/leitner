@@ -1,0 +1,68 @@
+{
+  "format": "leitner-deck-share",
+  "version": 1,
+  "name": "Dérivées des fonctions usuelles",
+  "description": "Formules de dérivation des fonctions mathématiques usuelles (LaTeX rendu avec KaTeX)",
+  "cards": [
+    {
+      "front": "Dérivée de $f(x) = e^{x}$",
+      "back": "$f'(x) = e^{x}$"
+    },
+    {
+      "front": "Dérivée de $f(x) = e^{ax}$ (avec $a$ constante réelle)",
+      "back": "$f'(x) = a\\,e^{ax}$"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\ln(x)$",
+      "back": "$f'(x) = \\dfrac{1}{x}$ (pour $x > 0$)"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\log_a(x)$ (logarithme base $a$)",
+      "back": "$f'(x) = \\dfrac{1}{x \\ln(a)}$"
+    },
+    {
+      "front": "Dérivée de $f(x) = x^{n}$ (avec $n$ entier naturel)",
+      "back": "$f'(x) = n\\,x^{n-1}$"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\sqrt{x}$",
+      "back": "$f'(x) = \\dfrac{1}{2\\sqrt{x}}$ (pour $x > 0$)"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\dfrac{1}{x}$",
+      "back": "$f'(x) = -\\dfrac{1}{x^{2}}$"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\sin(x)$",
+      "back": "$f'(x) = \\cos(x)$"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\cos(x)$",
+      "back": "$f'(x) = -\\sin(x)$"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\tan(x)$",
+      "back": "$f'(x) = 1 + \\tan^{2}(x) = \\dfrac{1}{\\cos^{2}(x)}$"
+    },
+    {
+      "front": "Dérivée de $f(x) = a^{x}$ (avec $a > 0$, $a \\neq 1$)",
+      "back": "$f'(x) = a^{x}\\,\\ln(a)$"
+    },
+    {
+      "front": "Dérivée de $f(x) = \\operatorname{sh}(x)$ (sinus hyperbolique)",
+      "back": "$f'(x) = \\operatorname{ch}(x)$"
+    },
+    {
+      "front": "Règle de dérivation d'un produit : dérivée de $u(x) \\cdot v(x)$",
+      "back": "$(u \\cdot v)' = u'\\,v + u\\,v'$"
+    },
+    {
+      "front": "Règle de dérivation d'un quotient : dérivée de $\\dfrac{u(x)}{v(x)}$",
+      "back": "$\\left(\\dfrac{u}{v}\\right)' = \\dfrac{u'\\,v - u\\,v'}{v^{2}}$ (avec $v \\neq 0$)"
+    },
+    {
+      "front": "Règle de dérivation d'une composée : dérivée de $f(u(x))$",
+      "back": "$(f \\circ u)' = u' \\cdot f'(u)$"
+    }
+  ]
+}

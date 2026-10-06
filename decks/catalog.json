@@ -1,0 +1,22 @@
+{
+  "decks": [
+    {
+      "name": "Départements français",
+      "description": "Numéro → nom des 101 départements français (métropole + outre-mer)",
+      "file": "departements-francais.json",
+      "cardCount": 101
+    },
+    {
+      "name": "Anglais — cuisine",
+      "description": "Vocabulaire courant de la cuisine en anglais (verbes, ustensiles, ingrédients)",
+      "file": "anglais-cuisine.json",
+      "cardCount": 60
+    },
+    {
+      "name": "Dérivées des fonctions usuelles",
+      "description": "Formules de dérivation des fonctions mathématiques usuelles (LaTeX rendu avec KaTeX)",
+      "file": "derivees-usuelles.json",
+      "cardCount": 15
+    }
+  ]
+}

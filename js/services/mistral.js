@@ -13,6 +13,9 @@
     "- Si le sujet a une taille naturelle (ex. les 101 départements français, les 26 lettres de l'alphabet),",
     "  génère TOUTES les cartes correspondantes, même si cela diffère du nombre demandé ; explique alors ce choix.",
     "- Si aucun nombre n'est demandé, choisis un nombre pertinent pour le sujet (entre 10 et 50).",
+    "- Si une carte contient des mathématiques (formules, équations, exposants, fractions, racines…),",
+    "  écris la formule en syntaxe LaTeX entre $...$, par exemple \"$f(x) = e^{x}$\" ou \"$\\frac{1}{x}$\".",
+    "- Le texte hors formules reste en texte simple, sans LaTeX.",
     "Répond UNIQUEMENT avec un objet JSON valide, sans balises markdown, au format :",
     '{"name": "nom du jeu", "description": "courte description", "cards": [{"front": "...", "back": "..."}]}'
   ].join("\n");
@@ -23,6 +26,8 @@
     "La consigne peut demander de supprimer des cartes, de remplacer des cartes, d'en ajouter,",
     "de corriger des erreurs, de simplifier, etc. Applique la consigne à l'ensemble du jeu.",
     "- Conserve la mise en forme minimale (texte simple).",
+    "- Conserve les formules LaTeX telles quelles (entre $...$) ; si une carte contient des mathématiques",
+    "  en texte brut (ex. \"e^x\"), réécris-les en LaTeX entre $...$ (ex. \"$f(x) = e^{x}$\").",
     "- Répond UNIQUEMENT avec un objet JSON valide, sans balises markdown, au format :",
     '{"cards": [{"front": "...", "back": "..."}]}',
     "Renvoie la liste COMPLÈTE des cartes du jeu révisé (celles conservées + les nouvelles), pas seulement les changements."

@@ -24,6 +24,7 @@ var ctx = vm.createContext({
       "./Deck.js": "js/models/Deck.js",
       "store.js": "js/services/store.js",
       "shuffle.js": "js/models/shuffle.js",
+      "mathRender.js": "js/services/mathRender.js",
       "mistral.js": "js/services/mistral.js",
       "settings.js": "js/services/settings.js",
       "../models/Deck.js": "js/models/Deck.js",
@@ -51,6 +52,7 @@ var Card = loadFile("js/models/Card.js");
 var Deck = loadFile("js/models/Deck.js");
 var Store = loadFile("js/services/store.js");
 var Shuffle = loadFile("js/models/shuffle.js");
+var MathRender = loadFile("js/services/mathRender.js");
 var MistralClient = loadFile("js/services/mistral.js");
 var Settings = loadFile("js/services/settings.js");
 
@@ -365,6 +367,86 @@ describe("Shuffle (file de révision)", function () {
       }
     }
     assert.ok(adjacentPairs < trials, "les paires réciproques ne doivent pas être systématiquement adjacentes");
+  });
+});
+
+function memStorageGlobal() {
+  var data = {};
+  return {
+    getItem: function (k) { return k in data ? data[k] : null; },
+    setItem: function (k, v) { data[k] = String(v); },
+    removeItem: function (k) { delete data[k]; }
+  };
+}
+
+describe("MathRender (segments LaTeX)", function () {
+  it("texte sans math reste un seul segment texte", function () {
+    var segs = MathRender.findSegments("Dérivée de la fonction carrée");
+    assert.strictEqual(segs.length, 1);
+    assert.strictEqual(segs[0].type, "text");
+    assert.strictEqual(segs[0].value, "Dérivée de la fonction carrée");
+  });
+
+  it("découpe texte + $math$ inline", function () {
+    var segs = MathRender.findSegments("Dérivée de $f(x) = e^{x}$ avec $a$ réel");
+    assert.strictEqual(segs.length, 5);
+    assert.strictEqual(segs[0].type, "text");
+    assert.strictEqual(segs[0].value, "Dérivée de ");
+    assert.strictEqual(segs[1].type, "math");
+    assert.strictEqual(segs[1].value, "f(x) = e^{x}");
+    assert.strictEqual(segs[1].display, false);
+    assert.strictEqual(segs[2].type, "text");
+    assert.strictEqual(segs[2].value, " avec ");
+    assert.strictEqual(segs[3].type, "math");
+    assert.strictEqual(segs[3].value, "a");
+    assert.strictEqual(segs[4].type, "text");
+    assert.strictEqual(segs[4].value, " réel");
+  });
+
+  it("gère $$...$$ en mode display et \\(...\\)", function () {
+    var segs = MathRender.findSegments("Formule : $$x^{2}$$ et \\(y\\)");
+    assert.strictEqual(segs.length, 4);
+    assert.strictEqual(segs[1].type, "math");
+    assert.strictEqual(segs[1].display, true);
+    assert.strictEqual(segs[1].value, "x^{2}");
+    assert.strictEqual(segs[3].type, "math");
+    assert.strictEqual(segs[3].display, false);
+    assert.strictEqual(segs[3].value, "y");
+  });
+
+  it("délimiteur non fermé : reste du texte", function () {
+    var segs = MathRender.findSegments("un $ non fermé et la suite");
+    assert.strictEqual(segs.length, 1);
+    assert.strictEqual(segs[0].type, "text");
+    assert.strictEqual(segs[0].value, "un $ non fermé et la suite");
+  });
+
+  it("ignore les $$ vides", function () {
+    var segs = MathRender.findSegments("a $$ b");
+    assert.strictEqual(segs.length, 1);
+    assert.strictEqual(segs[0].type, "text");
+    assert.strictEqual(segs[0].value, "a $$ b");
+  });
+
+  it("hasMath détecte les formules", function () {
+    assert.ok(MathRender.hasMath("$e^{x}$"));
+    assert.ok(!MathRender.hasMath("e^x texte brut"));
+    assert.ok(!MathRender.hasMath("texte simple"));
+  });
+
+  it("renderMath sans KaTeX chargé signale l'erreur sans planter", function () {
+    var res = MathRender.renderMath("x^{2}", false);
+    assert.ok(res.error);
+  });
+
+  it("import du jeu d'exemple dérivées (format export)", function () {
+    var raw = fs.readFileSync(path.join(__dirname, "..", "exemple-jeu-derivees.json"), "utf8");
+    var s = new Store(memStorageGlobal());
+    var n = s.importJSON(raw);
+    assert.strictEqual(n, 1);
+    var deck = s.decks[0];
+    assert.strictEqual(deck.cards.length, 15);
+    assert.ok(MathRender.hasMath(deck.cards[0].front));
   });
 });
 

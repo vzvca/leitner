@@ -173,3 +173,7 @@ button.fail:hover { background: var(--danger-dark); }
   box-shadow: var(--shadow);
   z-index: 10;
 }
+
+.leitner-math .math-display { display: block; margin: 0.5rem 0; }
+.leitner-math .katex { font-size: 1.05em; }
+.math-error { color: var(--danger); font-family: monospace; }

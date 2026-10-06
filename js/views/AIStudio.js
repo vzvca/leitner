@@ -224,7 +224,7 @@
           m("table.cards-table", [
             m("thead", m("tr", [m("th", "Recto"), m("th", "Verso")])),
             m("tbody", s.preview.cards.slice(0, 20).map(function (c) {
-              return m("tr", [m("td", c.front), m("td", c.back)]);
+              return m("tr", [m("td", m(global.MathText, { text: c.front })), m("td", m(global.MathText, { text: c.back }))]);
             }))
           ]),
           s.preview.cards.length > 20
@@ -267,7 +267,7 @@
           m("table.cards-table", [
             m("thead", m("tr", [m("th", "Recto"), m("th", "Verso")])),
             m("tbody", s.revPreview.slice(0, 20).map(function (c) {
-              return m("tr", [m("td", c.front), m("td", c.back)]);
+              return m("tr", [m("td", m(global.MathText, { text: c.front })), m("td", m(global.MathText, { text: c.back }))]);
             }))
           ]),
           s.revPreview.length > 20

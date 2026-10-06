@@ -22,6 +22,7 @@ Les cartes sont réparties dans **5 boîtes** aux intervalles de révision crois
 - Persistance **localStorage** (aucun backend requis).
 - **Jeux de cartes multiples** (ex. « Anglais — cuisine », « Anglais — voyage », « Dates historiques ») : création, renommage, suppression, sélection du jeu actif (sélecteur dans l'en-tête + page « Jeux »).
 - **Assistant IA (Mistral)** : génération automatique d'un jeu sur un sujet donné (taille optionnelle : 10/20/50/100/200, ou déduite du sujet, ex. les 101 départements), et révision d'un jeu existant par consigne libre (ex. « remplace les mots trop techniques par des mots courants »). La clé API est fournie par l'utilisateur et stockée uniquement dans son navigateur.
+- **Formules mathématiques en LaTeX** rendues avec [KaTeX](https://katex.org) (servi localement) : `$...$` inline, `$$...$$` en display, `\(...\)`. Les prompts de l'assistant IA demandent au modèle d'écrire les maths en LaTeX.
 - Import / export JSON des paquets.
 
 ## Structure
@@ -30,11 +31,13 @@ Les cartes sont réparties dans **5 boîtes** aux intervalles de révision crois
 index.html            point d'entrée
 css/app.css           styles
 vendor/mithril.min.js librairie Mithril
+vendor/katex/        librairie KaTeX (rendu LaTeX)
 js/models/            Card, Deck, constantes (logique métier pure, testable sous Node)
 js/services/store.js  persistance localStorage + import/export
 js/services/mistral.js client API Mistral (génération/révision de jeux)
 js/services/settings.js clé API Mistral (localStorage)
-js/views/             composants Mithril (Layout, Decks, AIStudio, CardList, Review, Stats)
+js/views/             composants Mithril (Layout, Decks, AIStudio, CardList, Review, Stats, MathText)
+exemple-jeu-derivees.json  jeu d'exemple « Dérivées des fonctions usuelles » (LaTeX) à importer via Statistiques → Importer
 js/app.js             bootstrap + routage
 test/logic.test.js    tests unitaires (node:test)
 ```

@@ -156,8 +156,8 @@
                 ]),
                 m("tbody", cards.map(function (card) {
                   return m("tr", { key: card.id }, [
-                    m("td", card.front),
-                    m("td", card.back),
+                    m("td", m(global.MathText, { text: card.front })),
+                    m("td", m(global.MathText, { text: card.back })),
                     m("td.box-col", "Boîte " + card.box),
                     m("td", card.dueDate || "—"),
                     m("td", card.correctCount + " / " + card.wrongCount),

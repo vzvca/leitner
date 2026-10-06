@@ -75,9 +75,9 @@
         m(".review-progress",
           "Paquet : " + deck.name + " — restantes : " + (s.queue.length + 1) + " — révisées : " + s.done),
         m(".review-card", [
-          m(".question", s.current.front),
+          m(".question", m(global.MathText, { text: s.current.front })),
           s.revealed
-            ? m(".answer", s.current.back)
+            ? m(".answer", m(global.MathText, { text: s.current.back }))
             : m("p.muted", "Réfléchissez, puis révélez la réponse."),
           s.revealed
             ? m(".review-actions", [

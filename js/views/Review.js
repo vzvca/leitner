@@ -2,6 +2,7 @@
   "use strict";
   var m = global.m;
   var constants = global.LeitnerConstants;
+  var shuffle = global.LeitnerShuffle.shuffleInPlace;
 
   var Review = {
     oninit: function (vnode) {
@@ -26,6 +27,7 @@
       var s = vnode.state;
       var deck = s.store.activeDeck();
       s.queue = deck.dueCards().slice();
+      shuffle(s.queue);
       s.current = s.queue.length > 0 ? s.queue[0] : null;
       s.queue = s.queue.slice(1);
       s.revealed = false;

@@ -26,6 +26,7 @@ var ctx = vm.createContext({
       "shuffle.js": "js/models/shuffle.js",
       "mathRender.js": "js/services/mathRender.js",
       "cardMedia.js": "js/services/cardMedia.js",
+      "imageStore.js": "js/services/imageStore.js",
       "mistral.js": "js/services/mistral.js",
       "settings.js": "js/services/settings.js",
       "../models/Deck.js": "js/models/Deck.js",
@@ -55,6 +56,7 @@ var Store = loadFile("js/services/store.js");
 var Shuffle = loadFile("js/models/shuffle.js");
 var MathRender = loadFile("js/services/mathRender.js");
 var CardMedia = loadFile("js/services/cardMedia.js");
+var ImageStoreMod = loadFile("js/services/imageStore.js");
 var MistralClient = loadFile("js/services/mistral.js");
 var Settings = loadFile("js/services/settings.js");
 
@@ -595,6 +597,107 @@ describe("CardMedia (cartes image)", function () {
       assert.ok(CardMedia.isImageField(c.front), "front doit être img:");
       assert.ok(CardMedia.imageSrc(c.front), "src doit être autorisée: " + c.front);
     });
+  });
+});
+
+describe("IndexedDB (imageStore)", function () {
+  function fakeFile(size, type) {
+    return { size: size, type: type };
+  }
+
+  it("put/get/remove fonctionnent via un mock IndexedDB", function () {
+    var saved = {};
+    var fakeIndexedDB = {
+      open: function (name, version) {
+        var store = {
+          get: function (id) { return req(saved[id] || null); },
+          put: function (rec) { saved[rec.id] = rec; return req(rec.id); },
+          delete: function (id) { delete saved[id]; return req(true); },
+          getAllKeys: function () { return req(Object.keys(saved)); }
+        };
+        function req(result) {
+          var r = { result: undefined, onsuccess: null, onerror: null };
+          r._fire = function () {
+            r.result = result;
+            r.onsuccess && r.onsuccess({ target: r });
+          };
+          return r;
+        }
+        // On simule les réponses asynchrones immédiatement
+        var origGet = store.get, origPut = store.put, origDel = store.delete, origKeys = store.getAllKeys;
+        store.get = function (id) { var r = origGet(id); setTimeout(function () { r._fire(); }, 0); return r; };
+        store.put = function (rec) { var r = origPut(rec); setTimeout(function () { r._fire(); }, 0); return r; };
+        store.delete = function (id) { var r = origDel(id); setTimeout(function () { r._fire(); }, 0); return r; };
+        store.getAllKeys = function () { var r = origKeys(); setTimeout(function () { r._fire(); }, 0); return r; };
+        var db = {
+          objectStoreNames: { contains: function () { return true; } },
+          transaction: function () {
+            return { objectStore: function () { return store; } };
+          }
+        };
+        var openReq = {
+          onsuccess: null, onerror: null, onupgradeneeded: null
+        };
+        setTimeout(function () {
+          openReq.onsuccess && openReq.onsuccess({ target: { result: db } });
+        }, 0);
+        return openReq;
+      }
+    };
+    ctx.indexedDB = fakeIndexedDB;
+    ImageStoreMod._resetForTests();
+
+    return ImageStoreMod.put("img-1", fakeFile(1024, "image/png"))
+      .then(function (id) {
+        assert.strictEqual(id, "img-1");
+        return ImageStoreMod.get("img-1");
+      })
+      .then(function (blob) {
+        assert.ok(blob, "blob retrouvé");
+        assert.strictEqual(blob.size, 1024);
+        return ImageStoreMod.list();
+      })
+      .then(function (keys) {
+        assert.ok(keys.indexOf("img-1") !== -1);
+        return ImageStoreMod.remove("img-1");
+      })
+      .then(function () {
+        return ImageStoreMod.get("img-1");
+      })
+      .then(function (blob) {
+        assert.strictEqual(blob, null, "blob supprimé");
+        delete ctx.indexedDB;
+      });
+  });
+
+  it("refuse les blobs trop volumineux (> 2 Mo)", function () {
+    return ImageStoreMod.put("big", fakeFile(3 * 1024 * 1024, "image/png"))
+      .then(function () { throw new Error("devrait refuser"); })
+      .catch(function (e) {
+        assert.ok(/volumineuse/.test(e.message), e.message);
+      });
+  });
+
+  it("refuse les entrées invalides (id manquant, pseudo-blob)", function () {
+    return ImageStoreMod.put("", fakeFile(10, "image/png"))
+      .then(function () { throw new Error("devrait refuser"); }, function (e) {
+        assert.ok(/id requis/.test(e.message));
+        return ImageStoreMod.put("x", { pas: "un blob" });
+      })
+      .then(function () { throw new Error("devrait refuser 2"); }, function (e) {
+        assert.ok(/blob invalide/.test(e.message));
+      });
+  });
+
+  it("CardMedia.idbId valide les identifiants idb:", function () {
+    assert.strictEqual(CardMedia.idbId("idb:img-abc123"), "img-abc123");
+    assert.strictEqual(CardMedia.idbId("idb:img-abc123\nLégende"), "img-abc123");
+    assert.strictEqual(CardMedia.idbId("idb:"), null);
+    assert.strictEqual(CardMedia.idbId("idb:avec espace"), null);
+    assert.strictEqual(CardMedia.idbId("idb:../evil"), null);
+    assert.strictEqual(CardMedia.idbId("img:images/a.svg"), null);
+    assert.ok(CardMedia.isImageField("idb:img-abc123"));
+    assert.ok(!CardMedia.isImageField("idb:"));
   });
 });
 

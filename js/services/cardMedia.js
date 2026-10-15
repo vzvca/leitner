@@ -2,10 +2,20 @@
   "use strict";
 
   var PREFIX = "img:";
+  var IDB_PREFIX = "idb:";
   var MAX_DATA_URL_CHARS = 700000; // ~500 Ko binaire en base64
 
   function isImageField(text) {
-    return typeof text === "string" && text.indexOf(PREFIX) === 0;
+    if (typeof text !== "string") return false;
+    if (text.indexOf(PREFIX) === 0) return true;
+    return idbId(text) !== null;
+  }
+
+  function idbId(text) {
+    if (typeof text !== "string" || text.indexOf(IDB_PREFIX) !== 0) return null;
+    var nl = text.indexOf("\n");
+    var ref = (nl === -1 ? text : text.slice(0, nl)).slice(IDB_PREFIX.length).trim();
+    return /^[A-Za-z0-9][A-Za-z0-9._\-]*$/.test(ref) ? ref : null;
   }
 
   function allowedSrc(ref) {
@@ -45,7 +55,10 @@
 
   var api = {
     PREFIX: PREFIX,
+    IDB_PREFIX: IDB_PREFIX,
     isImageField: isImageField,
+    isIdbField: function (text) { return idbId(text) !== null; },
+    idbId: idbId,
     allowedSrc: allowedSrc,
     imageSrc: imageSrc,
     imageCaption: imageCaption,

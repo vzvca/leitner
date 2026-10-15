@@ -29,6 +29,7 @@ var ctx = vm.createContext({
       "./cardMedia.js": "js/services/cardMedia.js",
       "imageStore.js": "js/services/imageStore.js",
       "./imageStore.js": "js/services/imageStore.js",
+      "imageResize.js": "js/services/imageResize.js",
       "./store.js": "js/services/store.js",
       "mistral.js": "js/services/mistral.js",
       "settings.js": "js/services/settings.js",
@@ -67,6 +68,7 @@ var Shuffle = loadFile("js/models/shuffle.js");
 var MathRender = loadFile("js/services/mathRender.js");
 var CardMedia = loadFile("js/services/cardMedia.js");
 var ImageStoreMod = loadFile("js/services/imageStore.js");
+var ImageResize = loadFile("js/services/imageResize.js");
 var MistralClient = loadFile("js/services/mistral.js");
 var Settings = loadFile("js/services/settings.js");
 
@@ -776,6 +778,41 @@ describe("IndexedDB (imageStore)", function () {
     assert.strictEqual(CardMedia.idbId("img:images/a.svg"), null);
     assert.ok(CardMedia.isImageField("idb:img-abc123"));
     assert.ok(!CardMedia.isImageField("idb:"));
+  });
+});
+
+describe("ImageResize", function () {
+  it("calculateDimensions respecte le max et conserve le ratio", function () {
+    var d = ImageResize.calculateDimensions(4000, 2000, 1024);
+    assert.strictEqual(d.width, 1024);
+    assert.strictEqual(d.height, 512);
+    var d2 = ImageResize.calculateDimensions(800, 600, 1024);
+    assert.strictEqual(d2.width, 800, "pas d'agrandissement");
+    assert.strictEqual(d2.height, 600);
+    var d3 = ImageResize.calculateDimensions(500, 5000, 1000);
+    assert.strictEqual(d3.width, 100);
+    assert.strictEqual(d3.height, 1000);
+  });
+
+  it("shouldResize selon le seuil", function () {
+    assert.ok(ImageResize.shouldResize(2000, 100, 1024));
+    assert.ok(ImageResize.shouldResize(100, 2000, 1024));
+    assert.ok(!ImageResize.shouldResize(800, 600, 1024));
+  });
+
+  it("isResizableType accepte png/jpg/webp/gif, refuse le reste", function () {
+    assert.ok(ImageResize.isResizableType("image/png"));
+    assert.ok(ImageResize.isResizableType("image/jpeg"));
+    assert.ok(ImageResize.isResizableType("image/webp"));
+    assert.ok(ImageResize.isResizableType("image/gif"));
+    assert.ok(!ImageResize.isResizableType("image/svg+xml"));
+    assert.ok(!ImageResize.isResizableType("text/html"));
+    assert.ok(!ImageResize.isResizableType(null));
+  });
+
+  it("calculateDimensions gère les entrées invalides", function () {
+    var d = ImageResize.calculateDimensions(0, 0, 1024);
+    assert.strictEqual(d.scale, 0);
   });
 });
 

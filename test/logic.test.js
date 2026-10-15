@@ -25,6 +25,7 @@ var ctx = vm.createContext({
       "store.js": "js/services/store.js",
       "shuffle.js": "js/models/shuffle.js",
       "mathRender.js": "js/services/mathRender.js",
+      "cardMedia.js": "js/services/cardMedia.js",
       "mistral.js": "js/services/mistral.js",
       "settings.js": "js/services/settings.js",
       "../models/Deck.js": "js/models/Deck.js",
@@ -53,6 +54,7 @@ var Deck = loadFile("js/models/Deck.js");
 var Store = loadFile("js/services/store.js");
 var Shuffle = loadFile("js/models/shuffle.js");
 var MathRender = loadFile("js/services/mathRender.js");
+var CardMedia = loadFile("js/services/cardMedia.js");
 var MistralClient = loadFile("js/services/mistral.js");
 var Settings = loadFile("js/services/settings.js");
 
@@ -356,7 +358,7 @@ describe("Shuffle (file de révision)", function () {
       ordered.push({ front: "dept" + n, back: String(n).padStart(2, "0") });
     }
     var adjacentPairs = 0;
-    var trials = 30;
+    var trials = 200;
     for (var t = 0; t < trials; t++) {
       var q = ordered.slice();
       Shuffle.shuffleInPlace(q);
@@ -366,7 +368,10 @@ describe("Shuffle (file de révision)", function () {
         }
       }
     }
-    assert.ok(adjacentPairs < trials, "les paires réciproques ne doivent pas être systématiquement adjacentes");
+    // En moyenne, une paire réciproque adjacente par tirage (10 paires, P ~ 2/20 par paire).
+    // Avec un ordre fixe, on aurait 10 adjacences par tirage : on exige nettement moins.
+    var avg = adjacentPairs / trials;
+    assert.ok(avg < 5, "trop de paires réciproques adjacentes en moyenne : " + avg);
   });
 });
 
@@ -533,6 +538,62 @@ describe("Partage de jeux individuels", function () {
       var deck = s.importDeckShare(raw);
       assert.strictEqual(deck.name, entry.name);
       assert.strictEqual(deck.cards.length, entry.cardCount);
+    });
+  });
+});
+
+describe("CardMedia (cartes image)", function () {
+  it("isImageField détecte le préfixe img:", function () {
+    assert.ok(CardMedia.isImageField("img:images/a/b.jpg"));
+    assert.ok(CardMedia.isImageField("img:data:image/png;base64,AAAA"));
+    assert.ok(!CardMedia.isImageField("images/a/b.jpg"));
+    assert.ok(!CardMedia.isImageField("Recto textuel"));
+  });
+
+  it("allowedSrc accepte les chemins images/, data:image et https", function () {
+    assert.strictEqual(CardMedia.allowedSrc("img:images/animaux/renard.jpg"), "images/animaux/renard.jpg");
+    assert.strictEqual(CardMedia.allowedSrc("img:images/a b.jpg"), null, "pas d'espace");
+    assert.strictEqual(
+      CardMedia.allowedSrc("img:data:image/png;base64,iVBORw0KGgo="),
+      "data:image/png;base64,iVBORw0KGgo="
+    );
+    assert.strictEqual(CardMedia.allowedSrc("img:https://example.com/a.png"), "https://example.com/a.png");
+  });
+
+  it("allowedSrc rejette javascript:, http:, ../ et les data URLs invalides", function () {
+    assert.strictEqual(CardMedia.allowedSrc("img:javascript:alert(1)"), null);
+    assert.strictEqual(CardMedia.allowedSrc("img:http://insecure.com/a.png"), null);
+    assert.strictEqual(CardMedia.allowedSrc("img:../secrets.txt"), null);
+    assert.strictEqual(CardMedia.allowedSrc("img:/etc/passwd"), null);
+    assert.strictEqual(CardMedia.allowedSrc("img:data:text/html;base64,PGI+"), null);
+    assert.strictEqual(CardMedia.allowedSrc("img:"), null);
+  });
+
+  it("data URLs trop volumineuses sont refusées (> ~500 Ko)", function () {
+    var big = "data:image/png;base64," + new Array(700001).join("A");
+    assert.strictEqual(CardMedia.allowedSrc("img:" + big), null);
+  });
+
+  it("légende sur la deuxième ligne du champ", function () {
+    var field = CardMedia.toImageField("images/a.svg", "Quelle est cette forme ?");
+    assert.strictEqual(field, "img:images/a.svg\nQuelle est cette forme ?");
+    assert.strictEqual(CardMedia.imageCaption(field), "Quelle est cette forme ?");
+    assert.strictEqual(CardMedia.imageSrc(field), "images/a.svg");
+    assert.strictEqual(CardMedia.imageSrc("img:images/a.svg"), "images/a.svg");
+    assert.strictEqual(CardMedia.imageCaption("img:images/a.svg"), "");
+  });
+
+  it("toImageField sans légende n'ajoute pas de ligne", function () {
+    assert.strictEqual(CardMedia.toImageField("images/a.svg"), "img:images/a.svg");
+  });
+
+  it("les fronts du jeu formes-geometriques sont des images valides", function () {
+    var raw = fs.readFileSync(path.join(__dirname, "..", "decks", "formes-geometriques.json"), "utf8");
+    var deck = JSON.parse(raw);
+    assert.strictEqual(deck.cards.length, 10);
+    deck.cards.forEach(function (c) {
+      assert.ok(CardMedia.isImageField(c.front), "front doit être img:");
+      assert.ok(CardMedia.imageSrc(c.front), "src doit être autorisée: " + c.front);
     });
   });
 });

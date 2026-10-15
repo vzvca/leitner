@@ -17,6 +17,12 @@
       "description": "Formules de dérivation des fonctions mathématiques usuelles (LaTeX rendu avec KaTeX)",
       "file": "derivees-usuelles.json",
       "cardCount": 15
+    },
+    {
+      "name": "Formes géométriques",
+      "description": "Reconnaître les formes géométriques (recto = image dans le dossier images/)",
+      "file": "formes-geometriques.json",
+      "cardCount": 10
     }
   ]
 }

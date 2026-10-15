@@ -23,6 +23,9 @@
       vnode.state.editingId = null;
       vnode.state.filterBox = "";
       vnode.state.search = "";
+      vnode.state.frontIsImage = false;
+      vnode.state.frontImageSrc = "";
+      vnode.state.frontImageCaption = "";
     },
     filtered: function (vnode) {
       var s = vnode.state;
@@ -37,11 +40,53 @@
         return okBox && okSearch;
       });
     },
+    pickFrontImage: function (s, ev) {
+      var file = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!file) return;
+      if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
+        toast(s.store, "Format d'image non supporté (png, jpg, gif, webp)");
+        return;
+      }
+      var img = new Image();
+      var reader = new FileReader();
+      reader.onload = function () {
+        img.onload = function () {
+          var maxDim = 640;
+          var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          var canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          var dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+          if (dataUrl.length > 700000) {
+            toast(s.store, "Image trop volumineuse même après compression (" + Math.round(dataUrl.length / 1024) + " Ko). Réduisez ses dimensions.");
+            return;
+          }
+          s.frontImageSrc = dataUrl;
+          s.frontIsImage = true;
+          m.redraw();
+        };
+        img.onerror = function () {
+          toast(s.store, "Impossible de lire cette image");
+        };
+        img.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    },
     save: function (vnode, e) {
       e.preventDefault();
       var s = vnode.state;
       var front = s.front.trim();
       var back = s.back.trim();
+      if (s.frontIsImage) {
+        var src = s.frontImageSrc.trim() || front;
+        if (!global.CardMedia.allowedSrc("img:" + src)) {
+          toast(s.store, "Source d'image invalide (chemin images/..., data:image/... ou https)");
+          return;
+        }
+        front = global.CardMedia.toImageField(src, s.frontImageCaption);
+      }
       if (!front || !back) {
         toast(s.store, "Recto et verso sont requis");
         return;
@@ -59,11 +104,24 @@
       s.editingId = null;
       s.front = "";
       s.back = "";
+      s.frontIsImage = false;
+      s.frontImageSrc = "";
+      s.frontImageCaption = "";
     },
     edit: function (vnode, card) {
       var s = vnode.state;
       s.editingId = card.id;
-      s.front = card.front;
+      if (global.CardMedia.isImageField(card.front)) {
+        s.frontIsImage = true;
+        s.frontImageSrc = card.front.slice(global.CardMedia.PREFIX.length).split("\n")[0];
+        s.frontImageCaption = global.CardMedia.imageCaption(card.front);
+        s.front = "";
+      } else {
+        s.frontIsImage = false;
+        s.frontImageSrc = "";
+        s.frontImageCaption = "";
+        s.front = card.front;
+      }
       s.back = card.back;
       s.showForm = true;
     },
@@ -120,12 +178,52 @@
               m("h2", s.editingId ? "Modifier la carte" : "Nouvelle carte"),
               m("form.stack", { onsubmit: function (e) { CardList.save(vnode, e); } }, [
                 m("div", [
-                  m("label", "Recto (question)"),
-                  m("input[type=text]", {
-                    value: s.front,
-                    onchange: function (e) { s.front = e.target.value; }
-                  })
+                  m("label", { style: "cursor:pointer" }, [
+                    m("input[type=checkbox]", {
+                      checked: s.frontIsImage,
+                      onchange: function (e) { s.frontIsImage = e.target.checked; }
+                    }),
+                    " Recto = image"
+                  ])
                 ]),
+                s.frontIsImage
+                  ? m("div", [
+                      m("label", "Image du recto"),
+                      m("div", { style: "display:flex; gap:.6rem; flex-wrap:wrap; align-items:center" }, [
+                        m("label.file-input-label", [
+                          "Choisir un fichier (compressé ≤ 500 Ko) : ",
+                          m("input[type=file][accept='image/png,image/jpeg,image/gif,image/webp']", {
+                            onchange: function (e) { CardList.pickFrontImage(s, e); }
+                          })
+                        ])
+                      ]),
+                      m("input[type=text]", {
+                        value: s.frontImageSrc,
+                        onchange: function (e) { s.frontImageSrc = e.target.value; },
+                        placeholder: "ou chemin images/… (ex. images/animaux/renard.jpg) ou https://…",
+                        style: "margin-top:.4rem"
+                      }),
+                      m("label", { style: "margin-top:.4rem" }, "Légende (optionnelle)"),
+                      m("input[type=text]", {
+                        value: s.frontImageCaption,
+                        onchange: function (e) { s.frontImageCaption = e.target.value; },
+                        placeholder: "ex. Quel est cet animal ?"
+                      }),
+                      s.frontImageSrc && global.CardMedia.allowedSrc("img:" + s.frontImageSrc.trim())
+                        ? m("img", {
+                            src: global.CardMedia.imageSrc("img:" + s.frontImageSrc.trim()),
+                            alt: "aperçu",
+                            style: "margin-top:.5rem; max-width:12rem; max-height:8rem; border-radius:6px; border:1px solid var(--border)"
+                          })
+                        : null
+                    ])
+                  : m("div", [
+                      m("label", "Recto (question)"),
+                      m("input[type=text]", {
+                        value: s.front,
+                        onchange: function (e) { s.front = e.target.value; }
+                      })
+                    ]),
                 m("div", [
                   m("label", "Verso (réponse)"),
                   m("textarea", {
@@ -156,8 +254,8 @@
                 ]),
                 m("tbody", cards.map(function (card) {
                   return m("tr", { key: card.id }, [
-                    m("td", m(global.MathText, { text: card.front })),
-                    m("td", m(global.MathText, { text: card.back })),
+                    m("td", m(global.CardSide, { text: card.front })),
+                    m("td", m(global.CardSide, { text: card.back })),
                     m("td.box-col", "Boîte " + card.box),
                     m("td", card.dueDate || "—"),
                     m("td", card.correctCount + " / " + card.wrongCount),

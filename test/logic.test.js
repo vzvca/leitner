@@ -26,6 +26,11 @@ var ctx = vm.createContext({
       "shuffle.js": "js/models/shuffle.js",
       "mathRender.js": "js/services/mathRender.js",
       "cardMedia.js": "js/services/cardMedia.js",
+      "./cardMedia.js": "js/services/cardMedia.js",
+      "imageStore.js": "js/services/imageStore.js",
+      "./imageStore.js": "js/services/imageStore.js",
+      "imageResize.js": "js/services/imageResize.js",
+      "./store.js": "js/services/store.js",
       "mistral.js": "js/services/mistral.js",
       "settings.js": "js/services/settings.js",
       "../models/Deck.js": "js/models/Deck.js",
@@ -41,9 +46,16 @@ function loadFile(rel) {
   var norm = rel.replace(/^\.\//, "").replace(/^\.\.\//, "");
   var code = fs.readFileSync(path.join(__dirname, "..", norm), "utf8");
   var localModule = { exports: {} };
+  var prevModule = ctx.module;
+  var prevExports = ctx.exports;
   ctx.module = localModule;
   ctx.exports = localModule.exports;
-  vm.runInContext(code, ctx, { filename: norm });
+  // Le module est exécuté avec ses propres module/exports injectés :
+  // les require imbriqués (qui réassignent ctx.module) ne peuvent plus détourner l'assignation finale.
+  var fn = vm.runInContext("(function (module, exports, require) {\n" + code + "\n})", ctx, { filename: norm });
+  fn(localModule, localModule.exports, ctx.require);
+  ctx.module = prevModule;
+  ctx.exports = prevExports;
   modules[norm] = localModule.exports;
   return localModule.exports;
 }
@@ -55,6 +67,8 @@ var Store = loadFile("js/services/store.js");
 var Shuffle = loadFile("js/models/shuffle.js");
 var MathRender = loadFile("js/services/mathRender.js");
 var CardMedia = loadFile("js/services/cardMedia.js");
+var ImageStoreMod = loadFile("js/services/imageStore.js");
+var ImageResize = loadFile("js/services/imageResize.js");
 var MistralClient = loadFile("js/services/mistral.js");
 var Settings = loadFile("js/services/settings.js");
 
@@ -469,22 +483,26 @@ describe("Partage de jeux individuels", function () {
   it("exportDeckShare produit un JSON sans boîtes ni statistiques", function () {
     var s = new Store(memStorageGlobal());
     s.decks = [deck1];
-    var raw = s.exportDeckShare(deck1.id);
-    assert.ok(raw, "export non vide");
-    var data = JSON.parse(raw);
-    assert.strictEqual(data.format, "leitner-deck-share");
-    assert.strictEqual(data.version, 1);
-    assert.strictEqual(data.name, "Cuisine EN");
-    assert.strictEqual(data.cards.length, 2);
-    data.cards.forEach(function (c) {
-      assert.deepStrictEqual(Object.keys(c).sort(), ["back", "front"]);
+    return s.exportDeckShare(deck1.id).then(function (raw) {
+      assert.ok(raw, "export non vide");
+      var data = JSON.parse(raw);
+      assert.strictEqual(data.format, "leitner-deck-share");
+      assert.strictEqual(data.version, 2);
+      assert.strictEqual(data.name, "Cuisine EN");
+      assert.strictEqual(data.cards.length, 2);
+      data.cards.forEach(function (c) {
+        assert.deepStrictEqual(Object.keys(c).sort(), ["back", "front"]);
+      });
+      assert.strictEqual(data.images, undefined, "pas d'images sans cartes idb:");
     });
   });
 
   it("exportDeckShare sur un id inconnu renvoie null", function () {
     var s = new Store(memStorageGlobal());
     s.decks = [deck1];
-    assert.strictEqual(s.exportDeckShare("inconnu"), null);
+    return s.exportDeckShare("inconnu").then(function (raw) {
+      assert.strictEqual(raw, null);
+    });
   });
 
   it("importDeckShare ajoute le jeu sans toucher aux autres paquets", function () {
@@ -496,13 +514,14 @@ describe("Partage de jeux individuels", function () {
       name: "Départements",
       cards: [{ front: "07", back: "Ardèche" }, { front: "69", back: "Rhône" }]
     });
-    var deck = s.importDeckShare(shared);
-    assert.strictEqual(s.decks.length, 2);
-    assert.strictEqual(deck.cards.length, 2);
-    assert.strictEqual(deck.cards[0].front, "07");
-    assert.strictEqual(deck.cards[0].box, 1);
-    assert.ok(deck.cards[0].dueDate, "échéance initialisée");
-    assert.strictEqual(deck1.cards.length, 2, "le paquet existant est intact");
+    return s.importDeckShare(shared).then(function (deck) {
+      assert.strictEqual(s.decks.length, 2);
+      assert.strictEqual(deck.cards.length, 2);
+      assert.strictEqual(deck.cards[0].front, "07");
+      assert.strictEqual(deck.cards[0].box, 1);
+      assert.ok(deck.cards[0].dueDate, "échéance initialisée");
+      assert.strictEqual(deck1.cards.length, 2, "le paquet existant est intact");
+    });
   });
 
   it("importDeckShare filtre les cartes invalides et renomme en cas de doublon", function () {
@@ -517,28 +536,91 @@ describe("Partage de jeux individuels", function () {
         null
       ]
     });
-    var deck = s.importDeckShare(shared);
-    assert.strictEqual(deck.cards.length, 1);
-    assert.strictEqual(deck.name, "Cuisine EN (2)");
+    return s.importDeckShare(shared).then(function (deck) {
+      assert.strictEqual(deck.cards.length, 1);
+      assert.strictEqual(deck.name, "Cuisine EN (2)");
+    });
   });
 
   it("importDeckShare rejette un jeu sans carte valide", function () {
     var s = new Store(memStorageGlobal());
-    assert.throws(function () {
-      s.importDeckShare('{"name":"vide","cards":[]}');
-    }, /Aucune carte valide/);
+    return s.importDeckShare('{"name":"vide","cards":[]}').then(function () {
+      throw new Error("devrait rejeter");
+    }, function (e) {
+      assert.ok(/Aucune carte valide/.test(e.message));
+    });
+  });
+
+  it("round-trip : export embarque les images idb en base64, l'import les restaure sous de nouveaux ids", function () {
+    // Mock IndexedDB minimal (store unique partagé)
+    ctx.atob = atob;
+    ctx.Uint8Array = Uint8Array;
+    ctx.Blob = function (parts, opts) { this.size = 5; this.type = (opts && opts.type) || ""; };
+    var saved = {};
+    function reqMake(result){var r={result:undefined,onsuccess:null,onerror:null};r._fire=function(){r.result=result;r.onsuccess&&r.onsuccess({target:r});};return r;}
+    var store={
+      get:function(id){var r=reqMake(saved[id]||null);setTimeout(function(){r._fire();},0);return r;},
+      put:function(rec){saved[rec.id]=rec;var r=reqMake(rec.id);setTimeout(function(){r._fire();},0);return r;},
+      delete:function(id){delete saved[id];var r=reqMake(true);setTimeout(function(){r._fire();},0);return r;},
+      getAllKeys:function(){var r=reqMake(Object.keys(saved));setTimeout(function(){r._fire();},0);return r;}
+    };
+    var db={objectStoreNames:{contains:function(){return true;}},transaction:function(){return {objectStore:function(){return store;}};}};
+    ctx.indexedDB={open:function(){var o={onsuccess:null,onerror:null};setTimeout(function(){o.onsuccess&&o.onsuccess({target:{result:db}});},0);return o;}};
+    ImageStoreMod._resetForTests();
+
+    // FileReader mock : blob -> dataURL déterministe
+    ctx.FileReader = function () {
+      this.result = null;
+      this.readAsDataURL = function (blob) {
+        var self = this;
+        setTimeout(function () {
+          self.result = "data:image/png;base64,aGVsbG8=";
+          self.onload();
+        }, 0);
+      };
+    };
+
+    return ImageStoreMod.put("old-uuid-1", { size: 100, type: "image/png" })
+      .then(function () {
+        var s = new Store(memStorageGlobal());
+        var deck = new Deck({ name: "Jeu avec images" });
+        deck.addCard("idb:old-uuid-1\nQuel est cet animal ?", "un renard");
+        s.decks = [deck];
+        return s.exportDeckShare(deck.id);
+      })
+      .then(function (raw) {
+        var data = JSON.parse(raw);
+        assert.strictEqual(data.version, 2);
+        assert.ok(data.images, "images embarquées");
+        assert.ok(data.images["old-uuid-1"], "image id old-uuid-1 présente");
+        // Import dans un autre store : les ids doivent être régénérés
+        var s2 = new Store(memStorageGlobal());
+        return s2.importDeckShare(raw).then(function (deck2) {
+          var front = deck2.cards[0].front;
+          var newId = CardMedia.idbId(front);
+          assert.ok(newId, "carte toujours idb:");
+          assert.notStrictEqual(newId, "old-uuid-1", "nouvel id généré (pas de conflit)");
+          assert.ok(/^quel/i.test(CardMedia.imageCaption(front)), "légende conservée");
+        });
+      })
+      .then(function () { delete ctx.indexedDB; delete ctx.FileReader; });
   });
 
   it("les jeux du catalogue decks/ sont au format share et valides", function () {
     var s = new Store(memStorageGlobal());
     var cat = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "decks", "catalog.json"), "utf8"));
     assert.ok(cat.decks.length >= 3);
+    var chain = Promise.resolve();
     cat.decks.forEach(function (entry) {
-      var raw = fs.readFileSync(path.join(__dirname, "..", "decks", entry.file), "utf8");
-      var deck = s.importDeckShare(raw);
-      assert.strictEqual(deck.name, entry.name);
-      assert.strictEqual(deck.cards.length, entry.cardCount);
+      chain = chain.then(function () {
+        var raw = fs.readFileSync(path.join(__dirname, "..", "decks", entry.file), "utf8");
+        return s.importDeckShare(raw).then(function (deck) {
+          assert.strictEqual(deck.name, entry.name);
+          assert.strictEqual(deck.cards.length, entry.cardCount);
+        });
+      });
     });
+    return chain;
   });
 });
 
@@ -595,6 +677,142 @@ describe("CardMedia (cartes image)", function () {
       assert.ok(CardMedia.isImageField(c.front), "front doit être img:");
       assert.ok(CardMedia.imageSrc(c.front), "src doit être autorisée: " + c.front);
     });
+  });
+});
+
+describe("IndexedDB (imageStore)", function () {
+  function fakeFile(size, type) {
+    return { size: size, type: type };
+  }
+
+  it("put/get/remove fonctionnent via un mock IndexedDB", function () {
+    var saved = {};
+    var fakeIndexedDB = {
+      open: function (name, version) {
+        var store = {
+          get: function (id) { return req(saved[id] || null); },
+          put: function (rec) { saved[rec.id] = rec; return req(rec.id); },
+          delete: function (id) { delete saved[id]; return req(true); },
+          getAllKeys: function () { return req(Object.keys(saved)); }
+        };
+        function req(result) {
+          var r = { result: undefined, onsuccess: null, onerror: null };
+          r._fire = function () {
+            r.result = result;
+            r.onsuccess && r.onsuccess({ target: r });
+          };
+          return r;
+        }
+        // On simule les réponses asynchrones immédiatement
+        var origGet = store.get, origPut = store.put, origDel = store.delete, origKeys = store.getAllKeys;
+        store.get = function (id) { var r = origGet(id); setTimeout(function () { r._fire(); }, 0); return r; };
+        store.put = function (rec) { var r = origPut(rec); setTimeout(function () { r._fire(); }, 0); return r; };
+        store.delete = function (id) { var r = origDel(id); setTimeout(function () { r._fire(); }, 0); return r; };
+        store.getAllKeys = function () { var r = origKeys(); setTimeout(function () { r._fire(); }, 0); return r; };
+        var db = {
+          objectStoreNames: { contains: function () { return true; } },
+          transaction: function () {
+            return { objectStore: function () { return store; } };
+          }
+        };
+        var openReq = {
+          onsuccess: null, onerror: null, onupgradeneeded: null
+        };
+        setTimeout(function () {
+          openReq.onsuccess && openReq.onsuccess({ target: { result: db } });
+        }, 0);
+        return openReq;
+      }
+    };
+    ctx.indexedDB = fakeIndexedDB;
+    ImageStoreMod._resetForTests();
+
+    return ImageStoreMod.put("img-1", fakeFile(1024, "image/png"))
+      .then(function (id) {
+        assert.strictEqual(id, "img-1");
+        return ImageStoreMod.get("img-1");
+      })
+      .then(function (blob) {
+        assert.ok(blob, "blob retrouvé");
+        assert.strictEqual(blob.size, 1024);
+        return ImageStoreMod.list();
+      })
+      .then(function (keys) {
+        assert.ok(keys.indexOf("img-1") !== -1);
+        return ImageStoreMod.remove("img-1");
+      })
+      .then(function () {
+        return ImageStoreMod.get("img-1");
+      })
+      .then(function (blob) {
+        assert.strictEqual(blob, null, "blob supprimé");
+        delete ctx.indexedDB;
+      });
+  });
+
+  it("refuse les blobs trop volumineux (> 2 Mo)", function () {
+    return ImageStoreMod.put("big", fakeFile(3 * 1024 * 1024, "image/png"))
+      .then(function () { throw new Error("devrait refuser"); })
+      .catch(function (e) {
+        assert.ok(/volumineuse/.test(e.message), e.message);
+      });
+  });
+
+  it("refuse les entrées invalides (id manquant, pseudo-blob)", function () {
+    return ImageStoreMod.put("", fakeFile(10, "image/png"))
+      .then(function () { throw new Error("devrait refuser"); }, function (e) {
+        assert.ok(/id requis/.test(e.message));
+        return ImageStoreMod.put("x", { pas: "un blob" });
+      })
+      .then(function () { throw new Error("devrait refuser 2"); }, function (e) {
+        assert.ok(/blob invalide/.test(e.message));
+      });
+  });
+
+  it("CardMedia.idbId valide les identifiants idb:", function () {
+    assert.strictEqual(CardMedia.idbId("idb:img-abc123"), "img-abc123");
+    assert.strictEqual(CardMedia.idbId("idb:img-abc123\nLégende"), "img-abc123");
+    assert.strictEqual(CardMedia.idbId("idb:"), null);
+    assert.strictEqual(CardMedia.idbId("idb:avec espace"), null);
+    assert.strictEqual(CardMedia.idbId("idb:../evil"), null);
+    assert.strictEqual(CardMedia.idbId("img:images/a.svg"), null);
+    assert.ok(CardMedia.isImageField("idb:img-abc123"));
+    assert.ok(!CardMedia.isImageField("idb:"));
+  });
+});
+
+describe("ImageResize", function () {
+  it("calculateDimensions respecte le max et conserve le ratio", function () {
+    var d = ImageResize.calculateDimensions(4000, 2000, 1024);
+    assert.strictEqual(d.width, 1024);
+    assert.strictEqual(d.height, 512);
+    var d2 = ImageResize.calculateDimensions(800, 600, 1024);
+    assert.strictEqual(d2.width, 800, "pas d'agrandissement");
+    assert.strictEqual(d2.height, 600);
+    var d3 = ImageResize.calculateDimensions(500, 5000, 1000);
+    assert.strictEqual(d3.width, 100);
+    assert.strictEqual(d3.height, 1000);
+  });
+
+  it("shouldResize selon le seuil", function () {
+    assert.ok(ImageResize.shouldResize(2000, 100, 1024));
+    assert.ok(ImageResize.shouldResize(100, 2000, 1024));
+    assert.ok(!ImageResize.shouldResize(800, 600, 1024));
+  });
+
+  it("isResizableType accepte png/jpg/webp/gif, refuse le reste", function () {
+    assert.ok(ImageResize.isResizableType("image/png"));
+    assert.ok(ImageResize.isResizableType("image/jpeg"));
+    assert.ok(ImageResize.isResizableType("image/webp"));
+    assert.ok(ImageResize.isResizableType("image/gif"));
+    assert.ok(!ImageResize.isResizableType("image/svg+xml"));
+    assert.ok(!ImageResize.isResizableType("text/html"));
+    assert.ok(!ImageResize.isResizableType(null));
+  });
+
+  it("calculateDimensions gère les entrées invalides", function () {
+    var d = ImageResize.calculateDimensions(0, 0, 1024);
+    assert.strictEqual(d.scale, 0);
   });
 });
 

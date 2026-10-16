@@ -40,52 +40,36 @@
         return okBox && okSearch;
       });
     },
-    pickFrontImage: function (s, ev) {
-      var file = ev.target.files && ev.target.files[0];
-      ev.target.value = "";
-      if (!file) return;
-      if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
-        toast(s.store, "Format d'image non supporté (png, jpg, gif, webp)");
-        return;
-      }
-      var img = new Image();
-      var reader = new FileReader();
-      reader.onload = function () {
-        img.onload = function () {
-          var maxDim = 640;
-          var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          var canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(img.width * scale));
-          canvas.height = Math.max(1, Math.round(img.height * scale));
-          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-          var dataUrl = canvas.toDataURL("image/jpeg", 0.72);
-          if (dataUrl.length > 700000) {
-            toast(s.store, "Image trop volumineuse même après compression (" + Math.round(dataUrl.length / 1024) + " Ko). Réduisez ses dimensions.");
-            return;
-          }
-          s.frontImageSrc = dataUrl;
-          s.frontIsImage = true;
-          m.redraw();
-        };
-        img.onerror = function () {
-          toast(s.store, "Impossible de lire cette image");
-        };
-        img.src = String(reader.result);
-      };
-      reader.readAsDataURL(file);
-    },
+
+
     save: function (vnode, e) {
       e.preventDefault();
       var s = vnode.state;
       var front = s.front.trim();
       var back = s.back.trim();
       if (s.frontIsImage) {
-        var src = s.frontImageSrc.trim() || front;
-        if (!global.CardMedia.allowedSrc("img:" + src)) {
-          toast(s.store, "Source d'image invalide (chemin images/..., data:image/... ou https)");
+        var raw = s.frontImageSrc.trim();
+        if (!raw) {
+          toast(s.store, "Choisissez une image (fichier, bibliothèque ou URL https)");
           return;
         }
-        front = global.CardMedia.toImageField(src, s.frontImageCaption);
+        if (raw.indexOf("idb:") === 0) {
+          if (!global.CardMedia.idbId(raw)) {
+            toast(s.store, "Identifiant IndexedDB invalide");
+            return;
+          }
+          front = raw + (s.frontImageCaption.trim() ? "\n" + s.frontImageCaption.trim() : "");
+        } else if (raw.indexOf("img:") === 0) {
+          if (!global.CardMedia.imageSrc(raw)) {
+            toast(s.store, "Source d'image invalide (chemin images/..., data:image/... ou https)");
+            return;
+          }
+          front = global.CardMedia.toImageField(
+            raw.slice(4).trim(), s.frontImageCaption);
+        } else {
+          toast(s.store, "Source d'image invalide");
+          return;
+        }
       }
       if (!front || !back) {
         toast(s.store, "Recto et verso sont requis");
@@ -113,7 +97,7 @@
       s.editingId = card.id;
       if (global.CardMedia.isImageField(card.front)) {
         s.frontIsImage = true;
-        s.frontImageSrc = card.front.slice(global.CardMedia.PREFIX.length).split("\n")[0];
+        s.frontImageSrc = card.front.split("\n")[0];
         s.frontImageCaption = global.CardMedia.imageCaption(card.front);
         s.front = "";
       } else {
@@ -189,33 +173,19 @@
                 s.frontIsImage
                   ? m("div", [
                       m("label", "Image du recto"),
-                      m("div", { style: "display:flex; gap:.6rem; flex-wrap:wrap; align-items:center" }, [
-                        m("label.file-input-label", [
-                          "Choisir un fichier (compressé ≤ 500 Ko) : ",
-                          m("input[type=file][accept='image/png,image/jpeg,image/gif,image/webp']", {
-                            onchange: function (e) { CardList.pickFrontImage(s, e); }
-                          })
-                        ])
-                      ]),
-                      m("input[type=text]", {
+                      m(global.ImagePicker, {
+                        store: s.store,
                         value: s.frontImageSrc,
-                        onchange: function (e) { s.frontImageSrc = e.target.value; },
-                        placeholder: "ou chemin images/… (ex. images/animaux/renard.jpg) ou https://…",
-                        style: "margin-top:.4rem"
+                        onchange: function (v) {
+                          s.frontImageSrc = v;
+                        }
                       }),
                       m("label", { style: "margin-top:.4rem" }, "Légende (optionnelle)"),
                       m("input[type=text]", {
                         value: s.frontImageCaption,
                         onchange: function (e) { s.frontImageCaption = e.target.value; },
                         placeholder: "ex. Quel est cet animal ?"
-                      }),
-                      s.frontImageSrc && global.CardMedia.allowedSrc("img:" + s.frontImageSrc.trim())
-                        ? m("img", {
-                            src: global.CardMedia.imageSrc("img:" + s.frontImageSrc.trim()),
-                            alt: "aperçu",
-                            style: "margin-top:.5rem; max-width:12rem; max-height:8rem; border-radius:6px; border:1px solid var(--border)"
-                          })
-                        : null
+                      })
                     ])
                   : m("div", [
                       m("label", "Recto (question)"),

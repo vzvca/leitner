@@ -26,8 +26,6 @@
       vnode.state.frontIsImage = false;
       vnode.state.frontImageSrc = "";
       vnode.state.frontImageCaption = "";
-      vnode.state.frontImageMode = "idb"; // "idb" | "ref" (chemin/https/data url)
-      vnode.state.frontImageIdbBusy = false;
     },
     filtered: function (vnode) {
       var s = vnode.state;
@@ -42,84 +40,35 @@
         return okBox && okSearch;
       });
     },
-    pickFrontImage: function (s, ev) {
-      var file = ev.target.files && ev.target.files[0];
-      ev.target.value = "";
-      if (!file) return;
-      if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
-        toast(s.store, "Format d'image non supporté (png, jpg, gif, webp)");
-        return;
-      }
-      var img = new Image();
-      var reader = new FileReader();
-      reader.onload = function () {
-        img.onload = function () {
-          var maxDim = 640;
-          var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          var canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(img.width * scale));
-          canvas.height = Math.max(1, Math.round(img.height * scale));
-          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-          var dataUrl = canvas.toDataURL("image/jpeg", 0.72);
-          if (dataUrl.length > 700000) {
-            toast(s.store, "Image trop volumineuse même après compression (" + Math.round(dataUrl.length / 1024) + " Ko). Réduisez ses dimensions.");
-            return;
-          }
-          s.frontImageSrc = dataUrl;
-          s.frontIsImage = true;
-          m.redraw();
-        };
-        img.onerror = function () {
-          toast(s.store, "Impossible de lire cette image");
-        };
-        img.src = String(reader.result);
-      };
-      reader.readAsDataURL(file);
-    },
-    pickFrontImageIdb: function (s, ev) {
-      var file = ev.target.files && ev.target.files[0];
-      ev.target.value = "";
-      if (!file) return;
-      if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
-        toast(s.store, "Format non supporté (png, jpg, gif, webp)");
-        return;
-      }
-      s.frontImageIdbBusy = true;
-      var id = "img-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-      global.ImageStore.put(id, file)
-        .then(function () {
-          s.frontImageSrc = "idb:" + id;
-          s.frontImageMode = "idb";
-          toast(s.store, "Image enregistrée dans IndexedDB (" + Math.round(file.size / 1024) + " Ko)");
-        })
-        .catch(function (e) {
-          toast(s.store, "IndexedDB : " + e.message);
-        })
-        .finally(function () {
-          s.frontImageIdbBusy = false;
-          m.redraw();
-        });
-    },
+
+
     save: function (vnode, e) {
       e.preventDefault();
       var s = vnode.state;
       var front = s.front.trim();
       var back = s.back.trim();
       if (s.frontIsImage) {
-        var raw = s.frontImageSrc.trim() || front;
+        var raw = s.frontImageSrc.trim();
+        if (!raw) {
+          toast(s.store, "Choisissez une image (fichier, bibliothèque ou URL https)");
+          return;
+        }
         if (raw.indexOf("idb:") === 0) {
-          if (!global.CardMedia.idbId("idb:" + raw.slice(4))) {
+          if (!global.CardMedia.idbId(raw)) {
             toast(s.store, "Identifiant IndexedDB invalide");
             return;
           }
-          front = "idb:" + raw.slice(4).trim() +
-            (s.frontImageCaption.trim() ? "\n" + s.frontImageCaption.trim() : "");
-        } else {
-          if (!global.CardMedia.allowedSrc("img:" + raw)) {
+          front = raw + (s.frontImageCaption.trim() ? "\n" + s.frontImageCaption.trim() : "");
+        } else if (raw.indexOf("img:") === 0) {
+          if (!global.CardMedia.imageSrc(raw)) {
             toast(s.store, "Source d'image invalide (chemin images/..., data:image/... ou https)");
             return;
           }
-          front = global.CardMedia.toImageField(raw, s.frontImageCaption);
+          front = global.CardMedia.toImageField(
+            raw.slice(4).trim(), s.frontImageCaption);
+        } else {
+          toast(s.store, "Source d'image invalide");
+          return;
         }
       }
       if (!front || !back) {
@@ -148,14 +97,7 @@
       s.editingId = card.id;
       if (global.CardMedia.isImageField(card.front)) {
         s.frontIsImage = true;
-        var firstLine = card.front.split("\n")[0];
-        if (firstLine.indexOf("idb:") === 0) {
-          s.frontImageMode = "idb";
-          s.frontImageSrc = firstLine;
-        } else {
-          s.frontImageMode = "ref";
-          s.frontImageSrc = firstLine.slice(global.CardMedia.PREFIX.length);
-        }
+        s.frontImageSrc = card.front.split("\n")[0];
         s.frontImageCaption = global.CardMedia.imageCaption(card.front);
         s.front = "";
       } else {
@@ -230,63 +172,20 @@
                 ]),
                 s.frontIsImage
                   ? m("div", [
-                      m("label", { style: "cursor:pointer; display:inline-block; margin-right:1rem" }, [
-                        m("input[type=radio]", {
-                          name: "frontImageMode",
-                          checked: s.frontImageMode === "idb",
-                          onchange: function () { s.frontImageMode = "idb"; }
-                        }),
-                        " Fichier (IndexedDB, ≤ 2 Mo)"
-                      ]),
-                      m("label", { style: "cursor:pointer; display:inline-block" }, [
-                        m("input[type=radio]", {
-                          name: "frontImageMode",
-                          checked: s.frontImageMode === "ref",
-                          onchange: function () { s.frontImageMode = "ref"; }
-                        }),
-                        " Référence (chemin images/… ou https)"
-                      ]),
-                      s.frontImageMode === "idb"
-                        ? m("div", [
-                            m("label.file-input-label", [
-                              "Choisir un fichier : ",
-                              m("input[type=file][accept='image/png,image/jpeg,image/gif,image/webp']", {
-                                disabled: s.frontImageIdbBusy,
-                                onchange: function (e) { CardList.pickFrontImageIdb(s, e); }
-                              })
-                            ]),
-                            s.frontImageIdbBusy ? m("div.muted", "Enregistrement…") : null,
-                            s.frontImageSrc.indexOf("idb:") === 0
-                              ? m("div.muted", "Image stockée : " + s.frontImageSrc + " (dans ce navigateur uniquement)")
-                              : null
-                          ])
-                        : m("div", [
-                            m("label.file-input-label", [
-                              "Ou importer compressé en data URL (≤ ~500 Ko) : ",
-                              m("input[type=file][accept='image/png,image/jpeg,image/gif,image/webp']", {
-                                onchange: function (e) { CardList.pickFrontImage(s, e); }
-                              })
-                            ]),
-                            m("input[type=text]", {
-                              value: s.frontImageSrc,
-                              onchange: function (e) { s.frontImageSrc = e.target.value; },
-                              placeholder: "chemin images/… (ex. images/animaux/renard.jpg) ou https://…",
-                              style: "margin-top:.4rem"
-                            })
-                          ]),
+                      m("label", "Image du recto"),
+                      m(global.ImagePicker, {
+                        store: s.store,
+                        value: s.frontImageSrc,
+                        onchange: function (v) {
+                          s.frontImageSrc = v;
+                        }
+                      }),
                       m("label", { style: "margin-top:.4rem" }, "Légende (optionnelle)"),
                       m("input[type=text]", {
                         value: s.frontImageCaption,
                         onchange: function (e) { s.frontImageCaption = e.target.value; },
                         placeholder: "ex. Quel est cet animal ?"
-                      }),
-                      s.frontImageMode === "ref" && s.frontImageSrc && global.CardMedia.allowedSrc("img:" + s.frontImageSrc.trim())
-                        ? m("img", {
-                            src: global.CardMedia.imageSrc("img:" + s.frontImageSrc.trim()),
-                            alt: "aperçu",
-                            style: "margin-top:.5rem; max-width:12rem; max-height:8rem; border-radius:6px; border:1px solid var(--border)"
-                          })
-                        : null
+                      })
                     ])
                   : m("div", [
                       m("label", "Recto (question)"),

@@ -81,30 +81,34 @@
       toast(s.store, "Jeu « " + deck.name + " » supprimé");
     },
     exportShare: function (s, deck) {
-      var json = s.store.exportDeckShare(deck.id);
-      if (!json) return;
-      var blob = new Blob([json], { type: "application/json" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url;
-      a.download = "leitner-" + deck.name.replace(/[^a-z0-9\u00C0-\u017F-]+/gi, "-").toLowerCase() + ".json";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast(s.store, "Jeu « " + deck.name + " » exporté (sans données de révision)");
+      s.store.exportDeckShare(deck.id).then(function (json) {
+        if (!json) return;
+        var blob = new Blob([json], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "leitner-" + deck.name.replace(/[^a-z0-9\u00C0-\u017F-]+/gi, "-").toLowerCase() + ".json";
+        a.click();
+        URL.revokeObjectURL(url);
+        toast(s.store, "Jeu « " + deck.name + " » exporté (sans données de révision)");
+      }).catch(function (e) {
+        toast(s.store, "Export échoué : " + e.message);
+      });
     },
     importShare: function (s, ev) {
       var file = ev.target.files && ev.target.files[0];
       if (!file) return;
       var reader = new FileReader();
       reader.onload = function () {
-        try {
-          var deck = s.store.importDeckShare(String(reader.result));
-          toast(s.store, "Jeu « " + deck.name + " » importé (" + deck.cards.length + " cartes)");
-          m.redraw();
-        } catch (e) {
-          toast(s.store, "Import échoué : " + e.message);
-          m.redraw();
-        }
+        s.store.importDeckShare(String(reader.result))
+          .then(function (deck) {
+            toast(s.store, "Jeu « " + deck.name + " » importé (" + deck.cards.length + " cartes)");
+            m.redraw();
+          })
+          .catch(function (e) {
+            toast(s.store, "Import échoué : " + e.message);
+            m.redraw();
+          });
       };
       reader.readAsText(file);
       ev.target.value = "";
@@ -131,7 +135,9 @@
       s.installBusy = entry.file;
       m.request({ method: "GET", url: "decks/" + entry.file })
         .then(function (data) {
-          var deck = s.store.importDeckShare(data);
+          return s.store.importDeckShare(data);
+        })
+        .then(function (deck) {
           toast(s.store, "Jeu « " + deck.name + " » ajouté (" + deck.cards.length + " cartes)");
         })
         .catch(function () {

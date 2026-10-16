@@ -91,8 +91,21 @@
     }).catch(function () { return null; });
   }
 
+  function uuid() {
+    if (typeof global.crypto !== "undefined" && global.crypto.randomUUID) {
+      return global.crypto.randomUUID();
+    }
+    // Fallback RFC 4122 v4 (si crypto.randomUUID indisponible)
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
   var api = {
     _resetForTests: function () { dbPromise = null; },
+    uuid: uuid,
     DB_NAME: DB_NAME,
     STORE: STORE,
     MAX_BLOB_BYTES: MAX_BLOB_BYTES,

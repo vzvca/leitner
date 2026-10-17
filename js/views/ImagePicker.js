@@ -197,12 +197,12 @@
             onchange: function (e) { s.urlInput = e.target.value; },
             onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); ImagePicker.addFromUrl(s); } }
           }),
-          m("button", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Copier dans la bibliothèque")
+          m("button[type=button]", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Copier dans la bibliothèque")
         ]),
 
         // Bibliothèque
         m("div", { style: "margin-top:.6rem" }, [
-          m("button", { onclick: function () { ImagePicker.loadLibrary(s); } },
+          m("button[type=button]", { onclick: function () { ImagePicker.loadLibrary(s); } },
             s.libraryOpen ? "Masquer la bibliothèque" : "Choisir dans la bibliothèque (" + (s.library ? s.library.length : "…") + ")"),
           s.libraryOpen ? ImagePicker.libraryView(s) : null
         ]),
@@ -240,7 +240,7 @@
           : m("span.muted", status),
         m("div", { style: "display:flex; gap:.5rem; align-items:center; margin-top:.3rem" }, [
           m("span.muted", { style: "font-size:.8rem" }, s.value.split("\n")[0].slice(0, 60)),
-          m("button", {
+          m("button[type=button]", {
             onclick: function () { s.value = ""; s.onchange(""); m.redraw(); }
           }, "Retirer")
         ])
@@ -275,7 +275,7 @@
       });
     },
     view: function (vnode) {
-      return m("button", {
+      return m("button[type=button]", {
         onclick: vnode.attrs.onpick,
         style: "padding:0; border:1px solid var(--border); border-radius:6px; overflow:hidden; cursor:pointer; background:none"
       }, [

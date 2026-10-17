@@ -2,10 +2,14 @@
   "use strict";
 
   var Deck = typeof require === "function" ? require("../models/Deck.js") : global.Deck;
-  var ImageStore = typeof require === "function" ? require("./imageStore.js") : global.ImageStore;
+  var ImageStoreModule = typeof require === "function" ? require("./imageStore.js") : null;
   var CardMediaModule = typeof require === "function" ? require("./cardMedia.js") : null;
   function getCardMedia() {
     return CardMediaModule || global.CardMedia;
+  }
+
+  function getImageStore() {
+    return ImageStoreModule || global.ImageStore;
   }
   var constants =
     typeof require === "function"
@@ -115,11 +119,11 @@
     });
     var ids = Object.keys(idRefs);
 
-    var exportImages = options.embedIdbImages !== false && typeof ImageStore !== "undefined" && ids.length > 0;
+    var exportImages = options.embedIdbImages !== false && !!getImageStore() && ids.length > 0;
 
     var imagesPromise = exportImages
       ? Promise.all(ids.map(function (id) {
-          return ImageStore.get(id).then(function (blob) {
+          return getImageStore().get(id).then(function (blob) {
             if (!blob) return null;
             return blobToDataUrl(blob).then(function (dataUrl) {
               return { id: id, data: dataUrl };
@@ -183,7 +187,7 @@
       return getCardMedia().isImageField(c.front) && getCardMedia().idbId(c.front) !== null;
     });
 
-    if (!images || !hasIdb || typeof ImageStore === "undefined") {
+    if (!images || !hasIdb || !getImageStore()) {
       // Pas d'images embarquées : importer tel quel (les cartes idb: garderont leur référence)
       var deck = self._buildImportedDeck(valid, name, data);
       return Promise.resolve(deck);
@@ -197,9 +201,9 @@
       if (typeof dataUrl !== "string" || dataUrl.indexOf("data:image/") !== 0) return;
       var blob = dataUrlToBlob(dataUrl);
       if (!blob) return;
-      var newId = ImageStore.uuid();
+      var newId = getImageStore().uuid();
       idMap[oldId] = newId;
-      restorePromises.push(ImageStore.put(newId, blob));
+      restorePromises.push(getImageStore().put(newId, blob));
     });
 
     return Promise.all(restorePromises).then(function () {

@@ -138,7 +138,9 @@
 
     loadLibrary: function (s) {
       s.libraryOpen = !s.libraryOpen;
-      if (s.libraryOpen && !s.library && !s.libraryBusy) {
+      // On recharge la liste à chaque ouverture : de nouvelles images ont pu
+      // être ajoutées depuis la dernière fois (collage, upload, import).
+      if (s.libraryOpen && !s.libraryBusy) {
         s.libraryBusy = true;
         ImageStore.list().then(function (ids) {
           s.library = ids;

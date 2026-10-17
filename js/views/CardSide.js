@@ -30,22 +30,36 @@
   CardSide.oninit = function (vnode) {
     vnode.state.idbUrl = null;
     vnode.state.idbError = "";
+    vnode.state.idbId = null;
+    CardSide.resolveIdbImage(vnode);
+  };
+
+  // Re-résout l'image si le texte (donc l'id idb) a changé depuis le dernier
+  // rendu — Mithril recycle le composant quand la carte est modifiée.
+  CardSide.resolveIdbImage = function (vnode) {
     var text = vnode.attrs.text || "";
     var id = CardMedia.idbId(text);
-    if (id) {
-      objectUrlFor(id)
-        .then(function (url) {
+    if (!id || id === vnode.state.idbId) return;
+    vnode.state.idbId = id;
+    vnode.state.idbUrl = null;
+    vnode.state.idbError = "";
+    objectUrlFor(id)
+      .then(function (url) {
+        if (vnode.state.idbId === id) {
           vnode.state.idbUrl = url;
           m.redraw();
-        })
-        .catch(function (e) {
+        }
+      })
+      .catch(function (e) {
+        if (vnode.state.idbId === id) {
           vnode.state.idbError = e.message || String(e);
           m.redraw();
-        });
-    }
+        }
+      });
   };
 
   CardSide.view = function (vnode) {
+    CardSide.resolveIdbImage(vnode);
     var text = vnode.attrs.text || "";
     var caption = CardMedia.imageCaption(text);
     var size = vnode.attrs.size === "large";

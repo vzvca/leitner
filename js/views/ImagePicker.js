@@ -43,13 +43,15 @@
       s.error = "";
       ImageResize.resizeBlob(file, { maxDim: 1024 })
         .then(function (resized) {
-          var id = ImageStore.uuid();
-          return ImageStore.put(id, resized).then(function () {
+          return ImageStore.putDedup(resized).then(function (res) {
+            var id = res.id;
             thumbCache[id] = null; // invalide
             s.value = "idb:" + id;
             s.onchange(s.value);
-            toast(s.store, "Image enregistrée (" + Math.round(resized.size / 1024) + " Ko" +
-              (resized.size < file.size ? ", redimensionnée depuis " + Math.round(file.size / 1024) + " Ko" : "") + ")");
+            toast(s.store, res.reused
+              ? "Image déjà en bibliothèque — réutilisée"
+              : "Image enregistrée (" + Math.round(resized.size / 1024) + " Ko" +
+                (resized.size < file.size ? ", redimensionnée depuis " + Math.round(file.size / 1024) + " Ko" : "") + ")");
           });
         })
         .catch(function (e) {

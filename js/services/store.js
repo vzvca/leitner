@@ -193,7 +193,8 @@
       return Promise.resolve(deck);
     }
 
-    // Images embarquées : restaurer chaque blob sous un NOUVEL uuid (évite les conflits)
+    // Images embarquées : restaurer chaque blob, en réutilisant une image
+    // identique déjà présente en base (même sha1) pour éviter les doublons.
     var idMap = {};
     var restorePromises = [];
     Object.keys(images).forEach(function (oldId) {
@@ -201,9 +202,9 @@
       if (typeof dataUrl !== "string" || dataUrl.indexOf("data:image/") !== 0) return;
       var blob = dataUrlToBlob(dataUrl);
       if (!blob) return;
-      var newId = getImageStore().uuid();
-      idMap[oldId] = newId;
-      restorePromises.push(getImageStore().put(newId, blob));
+      restorePromises.push(getImageStore().putDedup(blob).then(function (res) {
+        idMap[oldId] = res.id;
+      }));
     });
 
     return Promise.all(restorePromises).then(function () {

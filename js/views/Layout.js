@@ -33,7 +33,7 @@
         ]),
         m("main", vnode.children),
         vnode.attrs.store.toast
-          ? m("div.toast", { key: vnode.attrs.store.toastKey }, vnode.attrs.store.toast)
+          ? m("div.toast", vnode.attrs.store.toast)
           : null
       ];
     }

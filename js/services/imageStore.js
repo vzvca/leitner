@@ -55,30 +55,40 @@
   }
 
   // Complète les enregistrements créés avant l'index sha1 (best effort, une fois).
+  // Une transaction IndexedDB se ferme dès qu'aucune requête n'est en attente :
+  // le calcul du sha1 (asynchrone) doit donc se faire HORS transaction, et les
+  // écritures dans une transaction séparée.
   function ensureSha1Migration() {
     if (sha1Migrated) return;
     sha1Migrated = true;
-    tx("readwrite").then(function (store) {
+    tx("readonly").then(function (store) {
       return new Promise(function (resolve) {
-        var req = store.openCursor();
-        req.onsuccess = function (e) {
-          var cursor = e.target.result;
-          if (!cursor) { resolve(); return; }
-          var rec = cursor.value;
-          if (rec && !rec.sha1 && rec.blob) {
-            blobSha1(rec.blob).then(function (hex) {
-              if (hex) {
-                rec.sha1 = hex;
-                cursor.update(rec).onsuccess = function () { cursor.continue(); };
-              } else {
-                cursor.continue();
-              }
-            }).catch(function () { cursor.continue(); });
-          } else {
-            cursor.continue();
-          }
-        };
-        req.onerror = function () { resolve(); };
+        var req = store.getAll();
+        req.onsuccess = function (e) { resolve(e.target.result || []); };
+        req.onerror = function () { resolve([]); };
+      });
+    }).then(function (records) {
+      var toUpdate = records.filter(function (rec) { return rec && !rec.sha1 && rec.blob; });
+      if (toUpdate.length === 0) return null;
+      return Promise.all(toUpdate.map(function (rec) {
+        return blobSha1(rec.blob).then(function (hex) {
+          if (hex) rec.sha1 = hex;
+        }).catch(function () {});
+      })).then(function () {
+        var withSha1 = toUpdate.filter(function (rec) { return !!rec.sha1; });
+        if (withSha1.length === 0) return null;
+        return tx("readwrite").then(function (store) {
+          return new Promise(function (resolve) {
+            var remaining = withSha1.length;
+            withSha1.forEach(function (rec) {
+              var req = store.put(rec);
+              req.onsuccess = req.onerror = function () {
+                remaining -= 1;
+                if (remaining === 0) resolve();
+              };
+            });
+          });
+        });
       });
     }).catch(function () {});
   }

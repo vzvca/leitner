@@ -2,8 +2,11 @@
   "use strict";
 
   var Deck = typeof require === "function" ? require("../models/Deck.js") : global.Deck;
-  var CardMedia = typeof require === "function" ? require("./cardMedia.js") : global.CardMedia;
   var ImageStore = typeof require === "function" ? require("./imageStore.js") : global.ImageStore;
+  var CardMediaModule = typeof require === "function" ? require("./cardMedia.js") : null;
+  function getCardMedia() {
+    return CardMediaModule || global.CardMedia;
+  }
   var constants =
     typeof require === "function"
       ? require("../models/constants.js")
@@ -107,7 +110,7 @@
 
     var idRefs = {};
     deck.cards.forEach(function (c) {
-      var id = CardMedia.isImageField(c.front) ? CardMedia.idbId(c.front) : null;
+      var id = getCardMedia().isImageField(c.front) ? getCardMedia().idbId(c.front) : null;
       if (id) idRefs[id] = true;
     });
     var ids = Object.keys(idRefs);
@@ -177,7 +180,7 @@
     var name = typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Jeu importé";
     var images = data && data.images && typeof data.images === "object" ? data.images : null;
     var hasIdb = valid.some(function (c) {
-      return CardMedia.isImageField(c.front) && CardMedia.idbId(c.front) !== null;
+      return getCardMedia().isImageField(c.front) && getCardMedia().idbId(c.front) !== null;
     });
 
     if (!images || !hasIdb || typeof ImageStore === "undefined") {
@@ -201,7 +204,7 @@
 
     return Promise.all(restorePromises).then(function () {
       var remapped = valid.map(function (c) {
-        var id = CardMedia.isImageField(c.front) ? CardMedia.idbId(c.front) : null;
+        var id = getCardMedia().isImageField(c.front) ? getCardMedia().idbId(c.front) : null;
         if (!id || !idMap[id]) return c;
         var nl = c.front.indexOf("\n");
         var caption = nl === -1 ? "" : c.front.slice(nl + 1);

@@ -17,6 +17,19 @@
 
   var thumbCache = {};
 
+  // Charge paresseusement l'URL d'aperçu d'une image idb: (et met en cache).
+  function ensureThumb(id) {
+    if (!id || typeof thumbCache[id] === "string") return;
+    thumbCache[id] = "loading";
+    ImageStore.get(id).then(function (blob) {
+      thumbCache[id] = blob ? URL.createObjectURL(blob) : "missing";
+      m.redraw();
+    }).catch(function () {
+      thumbCache[id] = "missing";
+      m.redraw();
+    });
+  }
+
   var ImagePicker = {
     oninit: function (vnode) {
       var s = vnode.state;
@@ -43,13 +56,15 @@
       s.error = "";
       ImageResize.resizeBlob(file, { maxDim: 1024 })
         .then(function (resized) {
-          var id = ImageStore.uuid();
-          return ImageStore.put(id, resized).then(function () {
-            thumbCache[id] = null; // invalide
+          return ImageStore.putDedup(resized).then(function (res) {
+            var id = res.id;
+            delete thumbCache[id]; // invalide (rechargé par l'aperçu)
             s.value = "idb:" + id;
             s.onchange(s.value);
-            toast(s.store, "Image enregistrée (" + Math.round(resized.size / 1024) + " Ko" +
-              (resized.size < file.size ? ", redimensionnée depuis " + Math.round(file.size / 1024) + " Ko" : "") + ")");
+            toast(s.store, res.reused
+              ? "Image déjà en bibliothèque — réutilisée"
+              : "Image enregistrée (" + Math.round(resized.size / 1024) + " Ko" +
+                (resized.size < file.size ? ", redimensionnée depuis " + Math.round(file.size / 1024) + " Ko" : "") + ")");
           });
         })
         .catch(function (e) {
@@ -78,22 +93,54 @@
 
     addFromUrl: function (s) {
       var url = s.urlInput.trim();
-      if (!/^https:\/\/[^\s"'<>]+$/.test(url)) {
-        s.error = "URL invalide : doit être une URL https:// vers une image.";
+      var isHttps = /^https:\/\/[^\s"'<>]+$/.test(url);
+      var isRelative = /^images\/[^\s"'<>?#&]+$/.test(url) && url.indexOf("../") === -1;
+      var isDataUrl = /^data:image\/(png|jpe?g|gif|webp);base64,/.test(url);
+      if (!isHttps && !isRelative && !isDataUrl) {
+        s.error = "URL invalide : doit être une URL https://, un chemin images/… ou une data URL image.";
         m.redraw();
         return;
       }
       s.error = "";
-      s.value = "img:" + url;
-      s.urlInput = "";
-      s.onchange(s.value);
-      toast(s.store, "Image liée par URL (aucune copie locale)");
+      s.busy = true;
       m.redraw();
+      // On tente de copier l'image dans IndexedDB ; en cas d'échec
+      // (CORS, réseau), on retombe sur le lien direct img:.
+      ImageStore.ingestFromUrl(url).then(function (res) {
+        s.busy = false;
+        s.value = "idb:" + res.id;
+        s.urlInput = "";
+        s.onchange(s.value);
+        toast(s.store, res.reused
+          ? "Image déjà en bibliothèque — réutilisée"
+          : "Image copiée dans la bibliothèque locale");
+        m.redraw();
+      }).catch(function (err) {
+        s.busy = false;
+        if (!isHttps) {
+          s.error = "Impossible de récupérer l'image : " +
+            (err && err.message ? err.message : "erreur réseau");
+          m.redraw();
+          return;
+        }
+        // Repli : lien direct img: (le navigateur saura l'afficher même si
+        // le fetch a été bloqué, ex. CORS sans Access-Control-Allow-Origin).
+        s.value = "img:" + url;
+        s.urlInput = "";
+        s.onchange(s.value);
+        toast(s.store, "Copie locale impossible (CORS ou réseau) — image liée par URL");
+        s.error = "Le site interdit la copie de l'image (CORS). Elle reste liée par URL : " +
+          "l'affichage fonctionnera, mais l'image ne sera pas exportée/importée avec le jeu. " +
+          "Pour une copie locale, téléchargez l'image puis déposez le fichier ici.";
+        m.redraw();
+      });
     },
 
     loadLibrary: function (s) {
       s.libraryOpen = !s.libraryOpen;
-      if (s.libraryOpen && !s.library && !s.libraryBusy) {
+      // On recharge la liste à chaque ouverture : de nouvelles images ont pu
+      // être ajoutées depuis la dernière fois (collage, upload, import).
+      if (s.libraryOpen && !s.libraryBusy) {
         s.libraryBusy = true;
         ImageStore.list().then(function (ids) {
           s.library = ids;
@@ -149,20 +196,20 @@
               ]
         ]),
 
-        // URL https
+        // URL https / chemin relatif / data URL — copiée en IndexedDB si possible
         m("div", { style: "display:flex; gap:.5rem; margin-top:.6rem; flex-wrap:wrap" }, [
-          m("input[type=text][placeholder='Ou URL https:// d\\'une image']", {
+          m("input[type=text][placeholder='Ou URL https://, chemin images/… ou data URL']", {
             style: "flex:1; min-width:12rem",
             value: s.urlInput,
-            onchange: function (e) { s.urlInput = e.target.value; },
+            oninput: function (e) { s.urlInput = e.target.value; },
             onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); ImagePicker.addFromUrl(s); } }
           }),
-          m("button", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Lier l'URL")
+          m("button[type=button]", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Copier dans la bibliothèque")
         ]),
 
         // Bibliothèque
         m("div", { style: "margin-top:.6rem" }, [
-          m("button", { onclick: function () { ImagePicker.loadLibrary(s); } },
+          m("button[type=button]", { onclick: function () { ImagePicker.loadLibrary(s); } },
             s.libraryOpen ? "Masquer la bibliothèque" : "Choisir dans la bibliothèque (" + (s.library ? s.library.length : "…") + ")"),
           s.libraryOpen ? ImagePicker.libraryView(s) : null
         ]),
@@ -173,11 +220,23 @@
 
     preview: function (s) {
       var src = null;
+      var status = null;
       if (s.value.indexOf("idb:") === 0) {
         var id = CardMedia.idbId(s.value);
-        if (id && thumbCache[id]) src = thumbCache[id];
+        if (!id) {
+          status = s.value;
+        } else {
+          ensureThumb(id);
+          var cached = thumbCache[id];
+          if (cached && cached !== "loading" && cached !== "missing") {
+            src = cached;
+          } else {
+            status = cached === "missing" ? "Image introuvable dans la bibliothèque." : "Chargement de l'aperçu…";
+          }
+        }
       } else {
         src = CardMedia.imageSrc(s.value);
+        if (!src) status = s.value;
       }
       return m("div", { style: "margin-bottom:.6rem" }, [
         src
@@ -185,10 +244,10 @@
               src: src, alt: "aperçu",
               style: "max-width:14rem; max-height:10rem; border-radius:8px; border:1px solid var(--border)"
             })
-          : m("span.muted", s.value.indexOf("idb:") === 0 ? "Chargement de l'aperçu…" : s.value),
+          : m("span.muted", status),
         m("div", { style: "display:flex; gap:.5rem; align-items:center; margin-top:.3rem" }, [
           m("span.muted", { style: "font-size:.8rem" }, s.value.split("\n")[0].slice(0, 60)),
-          m("button", {
+          m("button[type=button]", {
             onclick: function () { s.value = ""; s.onchange(""); m.redraw(); }
           }, "Retirer")
         ])
@@ -213,16 +272,17 @@
   var LibraryThumb = {
     oninit: function (vnode) {
       vnode.state.url = null;
-      ImageStore.get(vnode.attrs.id).then(function (blob) {
+      var id = vnode.attrs.id;
+      ensureThumb(id);
+      ImageStore.get(id).then(function (blob) {
         if (blob) {
           vnode.state.url = URL.createObjectURL(blob);
-          thumbCache[vnode.attrs.id] = vnode.state.url;
           m.redraw();
         }
       });
     },
     view: function (vnode) {
-      return m("button", {
+      return m("button[type=button]", {
         onclick: vnode.attrs.onpick,
         style: "padding:0; border:1px solid var(--border); border-radius:6px; overflow:hidden; cursor:pointer; background:none"
       }, [

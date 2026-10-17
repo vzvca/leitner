@@ -17,6 +17,19 @@
 
   var thumbCache = {};
 
+  // Charge paresseusement l'URL d'aperçu d'une image idb: (et met en cache).
+  function ensureThumb(id) {
+    if (!id || typeof thumbCache[id] === "string") return;
+    thumbCache[id] = "loading";
+    ImageStore.get(id).then(function (blob) {
+      thumbCache[id] = blob ? URL.createObjectURL(blob) : "missing";
+      m.redraw();
+    }).catch(function () {
+      thumbCache[id] = "missing";
+      m.redraw();
+    });
+  }
+
   var ImagePicker = {
     oninit: function (vnode) {
       var s = vnode.state;
@@ -45,7 +58,7 @@
         .then(function (resized) {
           return ImageStore.putDedup(resized).then(function (res) {
             var id = res.id;
-            thumbCache[id] = null; // invalide
+            delete thumbCache[id]; // invalide (rechargé par l'aperçu)
             s.value = "idb:" + id;
             s.onchange(s.value);
             toast(s.store, res.reused
@@ -175,11 +188,23 @@
 
     preview: function (s) {
       var src = null;
+      var status = null;
       if (s.value.indexOf("idb:") === 0) {
         var id = CardMedia.idbId(s.value);
-        if (id && thumbCache[id]) src = thumbCache[id];
+        if (!id) {
+          status = s.value;
+        } else {
+          ensureThumb(id);
+          var cached = thumbCache[id];
+          if (cached && cached !== "loading" && cached !== "missing") {
+            src = cached;
+          } else {
+            status = cached === "missing" ? "Image introuvable dans la bibliothèque." : "Chargement de l'aperçu…";
+          }
+        }
       } else {
         src = CardMedia.imageSrc(s.value);
+        if (!src) status = s.value;
       }
       return m("div", { style: "margin-bottom:.6rem" }, [
         src
@@ -187,7 +212,7 @@
               src: src, alt: "aperçu",
               style: "max-width:14rem; max-height:10rem; border-radius:8px; border:1px solid var(--border)"
             })
-          : m("span.muted", s.value.indexOf("idb:") === 0 ? "Chargement de l'aperçu…" : s.value),
+          : m("span.muted", status),
         m("div", { style: "display:flex; gap:.5rem; align-items:center; margin-top:.3rem" }, [
           m("span.muted", { style: "font-size:.8rem" }, s.value.split("\n")[0].slice(0, 60)),
           m("button", {
@@ -215,10 +240,11 @@
   var LibraryThumb = {
     oninit: function (vnode) {
       vnode.state.url = null;
-      ImageStore.get(vnode.attrs.id).then(function (blob) {
+      var id = vnode.attrs.id;
+      ensureThumb(id);
+      ImageStore.get(id).then(function (blob) {
         if (blob) {
           vnode.state.url = URL.createObjectURL(blob);
-          thumbCache[vnode.attrs.id] = vnode.state.url;
           m.redraw();
         }
       });

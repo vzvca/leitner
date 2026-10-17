@@ -110,6 +110,43 @@
     });
   }
 
+  // Récupère une image depuis une URL (https, chemin relatif images/… ou data
+  // URL), la redimensionne à 1024 px max puis la stocke via putDedup.
+  // Résout { id, reused }, rejette si la récupération échoue (CORS, réseau,
+  // 404, type non image).
+  function ingestFromUrl(url) {
+    if (typeof url !== "string" || !url) return Promise.reject(new Error("URL requise"));
+    if (!/^(https?:\/\/|data:image\/|images\/)/.test(url)) {
+      return Promise.reject(new Error("Source non supportée (https://, images/… ou data:image/…)"));
+    }
+    if (typeof global.fetch !== "function") {
+      return Promise.reject(new Error("fetch indisponible"));
+    }
+    return global.fetch(url, { mode: "cors" }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var type = res.headers && res.headers.get ? res.headers.get("content-type") : "";
+      if (type && type.indexOf("image/") !== 0) {
+        throw new Error("La ressource n'est pas une image (" + type.split(";")[0] + ")");
+      }
+      return res.blob();
+    }).then(function (blob) {
+      if (!blob || typeof blob.size !== "number" || blob.size === 0) {
+        throw new Error("Image vide ou illisible");
+      }
+      if (blob.size > 10 * MAX_BLOB_BYTES) {
+        throw new Error("Image trop volumineuse (" + Math.round(blob.size / 1024) + " Ko)");
+      }
+      var type = blob.type && blob.type.indexOf("image/") === 0 ? blob.type : "image/png";
+      var resize = global.ImageResize;
+      var maybeResized = resize && resize.isResizableType(type)
+        ? resize.resizeBlob(blob, { maxDim: 1024 })
+        : Promise.resolve(blob);
+      return maybeResized.then(function (finalBlob) {
+        return putDedup(finalBlob);
+      });
+    });
+  }
+
   function findBySha1(hex) {
     if (!hex) return Promise.resolve(null);
     return tx("readonly").then(function (store) {
@@ -207,6 +244,7 @@
     open: open,
     put: put,
     putDedup: putDedup,
+    ingestFromUrl: ingestFromUrl,
     findBySha1: findBySha1,
     sha1Hex: sha1Hex,
     get: get,

@@ -93,17 +93,42 @@
 
     addFromUrl: function (s) {
       var url = s.urlInput.trim();
-      if (!/^https:\/\/[^\s"'<>]+$/.test(url)) {
-        s.error = "URL invalide : doit être une URL https:// vers une image.";
+      var isHttps = /^https:\/\/[^\s"'<>]+$/.test(url);
+      var isRelative = /^images\/[^\s"'<>?#&]+$/.test(url) && url.indexOf("../") === -1;
+      var isDataUrl = /^data:image\/(png|jpe?g|gif|webp);base64,/.test(url);
+      if (!isHttps && !isRelative && !isDataUrl) {
+        s.error = "URL invalide : doit être une URL https://, un chemin images/… ou une data URL image.";
         m.redraw();
         return;
       }
       s.error = "";
-      s.value = "img:" + url;
-      s.urlInput = "";
-      s.onchange(s.value);
-      toast(s.store, "Image liée par URL (aucune copie locale)");
+      s.busy = true;
       m.redraw();
+      // On tente de copier l'image dans IndexedDB ; en cas d'échec
+      // (CORS, réseau), on retombe sur le lien direct img:.
+      ImageStore.ingestFromUrl(url).then(function (res) {
+        s.busy = false;
+        s.value = "idb:" + res.id;
+        s.urlInput = "";
+        s.onchange(s.value);
+        toast(s.store, res.reused
+          ? "Image déjà en bibliothèque — réutilisée"
+          : "Image copiée dans la bibliothèque locale");
+        m.redraw();
+      }).catch(function () {
+        if (!isHttps) {
+          s.busy = false;
+          s.error = "Impossible de récupérer l'image.";
+          m.redraw();
+          return;
+        }
+        s.busy = false;
+        s.value = "img:" + url;
+        s.urlInput = "";
+        s.onchange(s.value);
+        toast(s.store, "Image liée par URL (copie locale impossible)");
+        m.redraw();
+      });
     },
 
     loadLibrary: function (s) {
@@ -164,15 +189,15 @@
               ]
         ]),
 
-        // URL https
+        // URL https / chemin relatif / data URL — copiée en IndexedDB si possible
         m("div", { style: "display:flex; gap:.5rem; margin-top:.6rem; flex-wrap:wrap" }, [
-          m("input[type=text][placeholder='Ou URL https:// d\\'une image']", {
+          m("input[type=text][placeholder='Ou URL https://, chemin images/… ou data URL']", {
             style: "flex:1; min-width:12rem",
             value: s.urlInput,
             onchange: function (e) { s.urlInput = e.target.value; },
             onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); ImagePicker.addFromUrl(s); } }
           }),
-          m("button", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Lier l'URL")
+          m("button", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Copier dans la bibliothèque")
         ]),
 
         // Bibliothèque

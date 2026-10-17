@@ -47,6 +47,8 @@
       var s = vnode.state;
       var front = s.front.trim();
       var back = s.back.trim();
+      var imgCaption = s.frontImageCaption.trim();
+      var convertPromise = null;
       if (s.frontIsImage) {
         var raw = s.frontImageSrc.trim();
         if (!raw) {
@@ -58,19 +60,33 @@
             toast(s.store, "Identifiant IndexedDB invalide");
             return;
           }
-          front = raw + (s.frontImageCaption.trim() ? "\n" + s.frontImageCaption.trim() : "");
+          front = raw + (imgCaption ? "\n" + imgCaption : "");
         } else if (raw.indexOf("img:") === 0) {
-          if (!global.CardMedia.imageSrc(raw)) {
+          var src = global.CardMedia.imageSrc(raw);
+          if (!src) {
             toast(s.store, "Source d'image invalide (chemin images/..., data:image/... ou https)");
             return;
           }
-          front = global.CardMedia.toImageField(
-            raw.slice(4).trim(), s.frontImageCaption);
+          // Toute source img: est convertie en image IndexedDB (dédupliquée).
+          convertPromise = global.ImageStore.ingestFromUrl(src).then(function (res) {
+            return "idb:" + res.id + (imgCaption ? "\n" + imgCaption : "");
+          });
         } else {
           toast(s.store, "Source d'image invalide");
           return;
         }
       }
+      (convertPromise || Promise.resolve(front)).then(function (finalFront) {
+        CardList.commitCard(vnode, finalFront, back);
+      }).catch(function (err) {
+        toast(s.store, "Impossible de copier l'image dans la bibliothèque : " +
+          (err && err.message ? err.message : "erreur inconnue"));
+        m.redraw();
+      });
+    },
+
+    commitCard: function (vnode, front, back) {
+      var s = vnode.state;
       if (!front || !back) {
         toast(s.store, "Recto et verso sont requis");
         return;

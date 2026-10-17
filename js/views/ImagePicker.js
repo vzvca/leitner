@@ -115,18 +115,23 @@
           ? "Image déjà en bibliothèque — réutilisée"
           : "Image copiée dans la bibliothèque locale");
         m.redraw();
-      }).catch(function () {
+      }).catch(function (err) {
+        s.busy = false;
         if (!isHttps) {
-          s.busy = false;
-          s.error = "Impossible de récupérer l'image.";
+          s.error = "Impossible de récupérer l'image : " +
+            (err && err.message ? err.message : "erreur réseau");
           m.redraw();
           return;
         }
-        s.busy = false;
+        // Repli : lien direct img: (le navigateur saura l'afficher même si
+        // le fetch a été bloqué, ex. CORS sans Access-Control-Allow-Origin).
         s.value = "img:" + url;
         s.urlInput = "";
         s.onchange(s.value);
-        toast(s.store, "Image liée par URL (copie locale impossible)");
+        toast(s.store, "Copie locale impossible (CORS ou réseau) — image liée par URL");
+        s.error = "Le site interdit la copie de l'image (CORS). Elle reste liée par URL : " +
+          "l'affichage fonctionnera, mais l'image ne sera pas exportée/importée avec le jeu. " +
+          "Pour une copie locale, téléchargez l'image puis déposez le fichier ici.";
         m.redraw();
       });
     },

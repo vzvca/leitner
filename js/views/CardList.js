@@ -199,7 +199,7 @@
                       m("label", { style: "margin-top:.4rem" }, "Légende (optionnelle)"),
                       m("input[type=text]", {
                         value: s.frontImageCaption,
-                        onchange: function (e) { s.frontImageCaption = e.target.value; },
+                        oninput: function (e) { s.frontImageCaption = e.target.value; },
                         placeholder: "ex. Quel est cet animal ?"
                       })
                     ])
@@ -207,14 +207,14 @@
                       m("label", "Recto (question)"),
                       m("input[type=text]", {
                         value: s.front,
-                        onchange: function (e) { s.front = e.target.value; }
+                        oninput: function (e) { s.front = e.target.value; }
                       })
                     ]),
                 m("div", [
                   m("label", "Verso (réponse)"),
                   m("textarea", {
                     value: s.back,
-                    onchange: function (e) { s.back = e.target.value; }
+                    oninput: function (e) { s.back = e.target.value; }
                   })
                 ]),
                 m("div", [

@@ -194,7 +194,7 @@
           m("input[type=text][placeholder='Ou URL https://, chemin images/… ou data URL']", {
             style: "flex:1; min-width:12rem",
             value: s.urlInput,
-            onchange: function (e) { s.urlInput = e.target.value; },
+            oninput: function (e) { s.urlInput = e.target.value; },
             onkeydown: function (e) { if (e.key === "Enter") { e.preventDefault(); ImagePicker.addFromUrl(s); } }
           }),
           m("button[type=button]", { onclick: function () { ImagePicker.addFromUrl(s); } }, "Copier dans la bibliothèque")
